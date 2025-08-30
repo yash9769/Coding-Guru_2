@@ -605,7 +605,7 @@ Return only the component code, no explanations.`;
 
   try {
     const response = await ai!.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: prompt,
     });
 
@@ -692,15 +692,15 @@ Generate the middleware file.`;
   try {
     const [routesResponse, modelsResponse, middlewareResponse] = await Promise.all([
       ai!.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: routesPrompt,
       }),
       ai!.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: modelsPrompt,
       }),
       ai!.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: middlewarePrompt,
       }),
     ]);
@@ -804,14 +804,45 @@ Return ONLY valid JSON in this exact format:
     }
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-1.5-pro",
       config: {
         responseMimeType: "application/json",
       },
       contents: prompt,
     });
 
-    const result = JSON.parse(response.text || '{}');
+    // Clean the response text to handle potential formatting issues
+    let responseText = response.text || '{}';
+    console.log('Raw AI response:', responseText);
+
+    // Remove any markdown code blocks if present
+    responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+    // Trim whitespace
+    responseText = responseText.trim();
+
+    console.log('Cleaned response text:', responseText);
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Response text that failed to parse:', responseText);
+      // Try to extract JSON from the response if it's wrapped in other text
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        console.log('Found JSON match:', jsonMatch[0]);
+        try {
+          result = JSON.parse(jsonMatch[0]);
+        } catch (secondError) {
+          console.error('Secondary JSON parse error:', secondError);
+          throw new Error('Failed to parse AI response as JSON');
+        }
+      } else {
+        console.error('No JSON match found in response');
+        throw new Error('No valid JSON found in AI response');
+      }
+    }
     
     return {
       title: result.title || "Generated Project",
@@ -848,7 +879,7 @@ Return only the optimized code, no explanations.`;
     }
     
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-1.5-pro",
       contents: prompt,
     });
 

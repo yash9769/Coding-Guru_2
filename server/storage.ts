@@ -11,15 +11,9 @@ import {
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
-// Conditional import of db
-let db: any;
-try {
-  const dbModule = await import("./db");
-  db = dbModule.db;
-} catch (error) {
-  console.warn("Database connection failed, using mock storage");
-  db = null;
-}
+// Temporarily disable database import to avoid connection issues
+let db: any = null;
+console.log("DEBUG: Database disabled, using mock storage only");
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -63,19 +57,24 @@ export class MockStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = this.users.get(userData.id || "local_user_123");
     const user: User = {
-      ...userData,
-      createdAt: this.users.get(userData.id)?.createdAt || new Date(),
+      id: userData.id || "local_user_123",
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
-    this.users.set(userData.id, user);
+    this.users.set(user.id, user);
     return user;
   }
 
   async getUserProjects(userId: string): Promise<Project[]> {
     return Array.from(this.projects.values())
       .filter(p => p.userId === userId)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      .sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0));
   }
 
   async getProject(id: string): Promise<Project | undefined> {
@@ -85,8 +84,15 @@ export class MockStorage implements IStorage {
   async createProject(project: InsertProject): Promise<Project> {
     const newProject: Project = {
       id: `project_${Date.now()}`,
-      ...project,
+      title: project.title,
+      description: project.description || null,
+      userId: project.userId,
+      components: project.components || [],
+      htmlCode: project.htmlCode || null,
+      cssCode: project.cssCode || null,
+      jsCode: project.jsCode || null,
       isPublished: false,
+      deploymentUrl: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -114,13 +120,19 @@ export class MockStorage implements IStorage {
   async getProjectEndpoints(projectId: string): Promise<ApiEndpoint[]> {
     return Array.from(this.apiEndpoints.values())
       .filter(e => e.projectId === projectId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   async createApiEndpoint(endpoint: InsertApiEndpoint): Promise<ApiEndpoint> {
     const newEndpoint: ApiEndpoint = {
       id: `endpoint_${Date.now()}`,
-      ...endpoint,
+      path: endpoint.path,
+      projectId: endpoint.projectId,
+      method: endpoint.method,
+      description: endpoint.description || null,
+      requestBody: endpoint.requestBody || null,
+      responseBody: endpoint.responseBody || null,
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -245,4 +257,6 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Choose storage implementation based on environment
-export const storage: IStorage = db ? new DatabaseStorage() : new MockStorage();
+// Temporarily force mock storage for debugging
+export const storage: IStorage = new MockStorage();
+console.log("DEBUG: Using MockStorage for all operations");

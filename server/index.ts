@@ -1,5 +1,6 @@
-import { config } from "dotenv";
-config();
+// Load environment variables FIRST before any other imports
+import "./env.ts";
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.ts";
 import { setupVite, serveStatic, log } from "./vite.ts";
@@ -46,7 +47,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    // Don't throw the error after sending response
   });
 
   // importantly only setup vite in development and after

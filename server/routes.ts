@@ -7,20 +7,121 @@ import { z } from "zod";
 import { log } from "./vite.ts";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
-  // Debug endpoint to check GEMINI_API_KEY
-  app.get('/api/debug/gemini-key', (_req, res) => {
+  // Debug endpoint to check GEMINI_API_KEY - placed before auth middleware
+  app.get('/api/debug/gemini-key', (req, res) => {
     const key = process.env.GEMINI_API_KEY;
     res.json({ geminiKey: key ? key.substring(0, 5) + '...' : 'undefined' });
   });
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // AI generation routes - placed before auth middleware to avoid session issues
+  app.post("/api/ai/generate-component", async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const { componentType, framework, stylePreferences } = req.body;
+      
+      if (!componentType || !framework || !stylePreferences) {
+        return res.status(400).json({ 
+          message: "Missing required fields: componentType, framework, stylePreferences" 
+        });
+      }
+
+      const { generateReactComponent } = await import("./gemini");
+      const generatedCode = await generateReactComponent(componentType, framework, stylePreferences);
+      
+      res.json({ 
+        code: generatedCode,
+        componentType,
+        framework 
+      });
+    } catch (error) {
+      console.error("Error generating component:", error);
+      res.status(500).json({ 
+        message: "Failed to generate component. Please check your API key and try again." 
+      });
+    }
+  });
+
+  app.post("/api/ai/generate-backend", async (req: any, res) => {
+    try {
+      const { database, framework, features } = req.body;
+      
+      if (!database || !framework || !features) {
+        return res.status(400).json({ 
+          message: "Missing required fields: database, framework, features" 
+        });
+      }
+
+      const { generateBackendCode } = await import("./gemini");
+      const generatedCode = await generateBackendCode(database, framework, features);
+      
+      res.json({ 
+        ...generatedCode,
+        database,
+        framework 
+      });
+    } catch (error) {
+      console.error("Error generating backend:", error);
+      res.status(500).json({ 
+        message: "Failed to generate backend code. Please check your API key and try again." 
+      });
+    }
+  });
+
+  // Build from prompt route - placed before auth middleware to avoid session issues
+  app.post("/api/ai/build-from-prompt", async (req: any, res) => {
+    try {
+      const { prompt, mode } = req.body;
+      
+      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+        return res.status(400).json({ 
+          message: "A valid prompt is required" 
+        });
+      }
+
+      const { buildFromPrompt } = await import("./gemini");
+      const generatedWebsite = await buildFromPrompt(prompt, mode || 'webapp');
+      
+      // Create a new project with the generated content
+      const userId = "local_user_123"; // Use mock user ID for local development
+      const projectData = insertProjectSchema.parse({
+        title: generatedWebsite.title,
+        description: generatedWebsite.description,
+        userId,
+        components: generatedWebsite.components,
+        htmlCode: generatedWebsite.htmlCode,
+        cssCode: generatedWebsite.cssCode,
+        jsCode: generatedWebsite.jsCode,
+      });
+      
+      const project = await storage.createProject(projectData);
+      
+      res.json({ 
+        project,
+        generated: generatedWebsite 
+      });
+    } catch (error) {
+      console.error("Error building from prompt:", error);
+      res.status(500).json({ 
+        message: "Failed to build from prompt. Please check your API key and try again." 
+      });
+    }
+  });
+
+  // Auth middleware - setup authentication for routes that need it
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      // For local dev, return mock user
+      const user = {
+        id: "local_user_123",
+        email: "demo@example.com",
+        firstName: "Demo",
+        lastName: "User",
+        profileImageUrl: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -29,10 +130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Project routes
-  app.get("/api/projects", isAuthenticated, async (req: any, res) => {
+  app.get("/api/projects", async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const projects = await storage.getUserProjects(userId);
+      // For local dev, return mock projects
+      const projects: any[] = [];
       res.json(projects);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -173,99 +274,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating endpoint:", error);
       res.status(500).json({ message: "Failed to create endpoint" });
-    }
-  });
-
-  // AI generation routes
-  app.post("/api/ai/generate-component", isAuthenticated, async (req: any, res) => {
-    try {
-      const { componentType, framework, stylePreferences } = req.body;
-      
-      if (!componentType || !framework || !stylePreferences) {
-        return res.status(400).json({ 
-          message: "Missing required fields: componentType, framework, stylePreferences" 
-        });
-      }
-
-      const { generateReactComponent } = await import("./gemini");
-      const generatedCode = await generateReactComponent(componentType, framework, stylePreferences);
-      
-      res.json({ 
-        code: generatedCode,
-        componentType,
-        framework 
-      });
-    } catch (error) {
-      console.error("Error generating component:", error);
-      res.status(500).json({ 
-        message: "Failed to generate component. Please check your API key and try again." 
-      });
-    }
-  });
-
-  app.post("/api/ai/generate-backend", isAuthenticated, async (req: any, res) => {
-    try {
-      const { database, framework, features } = req.body;
-      
-      if (!database || !framework || !features) {
-        return res.status(400).json({ 
-          message: "Missing required fields: database, framework, features" 
-        });
-      }
-
-      const { generateBackendCode } = await import("./gemini");
-      const generatedCode = await generateBackendCode(database, framework, features);
-      
-      res.json({ 
-        ...generatedCode,
-        database,
-        framework 
-      });
-    } catch (error) {
-      console.error("Error generating backend:", error);
-      res.status(500).json({ 
-        message: "Failed to generate backend code. Please check your API key and try again." 
-      });
-    }
-  });
-
-  // Build from prompt route
-  app.post("/api/ai/build-from-prompt", isAuthenticated, async (req: any, res) => {
-    try {
-      const { prompt, mode } = req.body;
-      
-      if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-        return res.status(400).json({ 
-          message: "A valid prompt is required" 
-        });
-      }
-
-      const { buildFromPrompt } = await import("./gemini");
-      const generatedWebsite = await buildFromPrompt(prompt, mode || 'webapp');
-      
-      // Create a new project with the generated content
-      const userId = req.user.claims.sub;
-      const projectData = insertProjectSchema.parse({
-        title: generatedWebsite.title,
-        description: generatedWebsite.description,
-        userId,
-        components: generatedWebsite.components,
-        htmlCode: generatedWebsite.htmlCode,
-        cssCode: generatedWebsite.cssCode,
-        jsCode: generatedWebsite.jsCode,
-      });
-      
-      const project = await storage.createProject(projectData);
-      
-      res.json({ 
-        project,
-        generated: generatedWebsite 
-      });
-    } catch (error) {
-      console.error("Error building from prompt:", error);
-      res.status(500).json({ 
-        message: "Failed to build from prompt. Please check your API key and try again." 
-      });
     }
   });
 

@@ -260,6 +260,8 @@ export default function Dashboard() {
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [viewMode, setViewMode] = useState<'drag-drop' | 'ai-build'>('drag-drop');
   const [aiMode, setAiMode] = useState<'flow' | 'webapp' | null>(null);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   // Debug function to clear localStorage completely
   (window as any).clearAIBuilderStorage = () => {
@@ -428,9 +430,9 @@ export default function Dashboard() {
         description: "Your component code has been generated successfully",
       });
 
-      // In a real app, you might save this to a project or show it in a modal
-      console.log('Generated code:', result.code);
-      
+      setGeneratedCode(result.code);
+      setShowCodeModal(true);
+
     } catch (error) {
       console.error('Code generation error:', error);
       toast({
@@ -590,829 +592,361 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-
-      <div className="flex h-[calc(100vh-73px)]">
-        {viewMode === 'drag-drop' ? (
-          <>
-            {/* Component Palette */}
-            <div className="w-80 bg-card border-r border-border p-4 overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Components</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setViewMode('ai-build')}
-                  className="bg-gradient-to-r from-primary to-accent text-white hover:opacity-90"
-                  data-testid="button-build-with-ai"
-                >
-                  <WandSparkles className="w-4 h-4 mr-1" />
-                  Build with AI
-                </Button>
-              </div>
-          
-          {/* Search */}
-          <div className="mb-4">
-            <Input
-              type="text"
-              placeholder="Search components..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-              data-testid="input-search-components"
-            />
-          </div>
-
-          {/* Component Categories */}
-          <div className="space-y-4">
-            {categories.map((category) => {
-              const categoryComponents = filteredComponents.filter(c => c.category === category);
-              if (categoryComponents.length === 0) return null;
-
-              return (
-                <div key={category}>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                    {category}
-                  </h4>
-                  <div className="space-y-2">
-                    {categoryComponents.map((component) => (
-                      <div
-                        key={component.id}
-                        className="bg-background border border-border rounded-lg p-3 cursor-move hover:shadow-md hover:-translate-y-0.5 transition-all"
-                        onClick={() => handleComponentDrop(component)}
-                        data-testid={`component-${component.id}`}
-                      >
-                        <div className="flex items-center">
-                          {(() => {
-                            // Map icon components to their names and render safely
-                            const iconMap: Record<string, any> = {
-                              'Monitor': Monitor,
-                              'NavigationIcon': NavigationIcon,
-                              'Grid': Grid,
-                              'Star': Star,
-                              'Type': Type,
-                              'Image': Image,
-                              'MousePointer': MousePointer,
-                              'FileText': FileText,
-                              'CreditCard': CreditCard,
-                              'Video': Video,
-                              'Music': Music,
-                              'Calendar': Calendar,
-                              'MapPin': MapPin,
-                              'ShoppingCart': ShoppingCart,
-                              'Users': Users,
-                              'Mail': Mail,
-                              'Phone': Phone,
-                              'Clock': Clock,
-                              'Globe': Globe,
-                              'Layers': Layers,
-                              'Layout': Layout,
-                              'Columns': Columns,
-                              'BarChart3': BarChart3,
-                              'PieChart': PieChart,
-                              'TrendingUp': TrendingUp,
-                              'MessageSquare': MessageSquare,
-                              'Heart': Heart,
-                              'Share2': Share2,
-                              'Download': Download,
-                              'Upload': Upload,
-                              'Lock': Lock,
-                              'User': User,
-                              'Award': Award,
-                              'Bookmark': Bookmark,
-                              'Tag': Tag,
-                              'Search': Search,
-                            };
-                            
-                            // Get icon name from component
-                            let iconName = 'Type'; // fallback
-                            if (component.icon === Monitor) iconName = 'Monitor';
-                            else if (component.icon === NavigationIcon) iconName = 'NavigationIcon';
-                            else if (component.icon === Grid) iconName = 'Grid';
-                            else if (component.icon === Star) iconName = 'Star';
-                            else if (component.icon === Type) iconName = 'Type';
-                            else if (component.icon === Image) iconName = 'Image';
-                            else if (component.icon === MousePointer) iconName = 'MousePointer';
-                            else if (component.icon === FileText) iconName = 'FileText';
-                            else if (component.icon === CreditCard) iconName = 'CreditCard';
-                            else if (component.icon === Video) iconName = 'Video';
-                            else if (component.icon === Music) iconName = 'Music';
-                            else if (component.icon === Calendar) iconName = 'Calendar';
-                            else if (component.icon === MapPin) iconName = 'MapPin';
-                            else if (component.icon === ShoppingCart) iconName = 'ShoppingCart';
-                            else if (component.icon === Users) iconName = 'Users';
-                            else if (component.icon === Mail) iconName = 'Mail';
-                            else if (component.icon === Phone) iconName = 'Phone';
-                            else if (component.icon === Clock) iconName = 'Clock';
-                            else if (component.icon === Globe) iconName = 'Globe';
-                            else if (component.icon === Layers) iconName = 'Layers';
-                            else if (component.icon === Layout) iconName = 'Layout';
-                            else if (component.icon === Columns) iconName = 'Columns';
-                            else if (component.icon === BarChart3) iconName = 'BarChart3';
-                            else if (component.icon === PieChart) iconName = 'PieChart';
-                            else if (component.icon === TrendingUp) iconName = 'TrendingUp';
-                            else if (component.icon === MessageSquare) iconName = 'MessageSquare';
-                            else if (component.icon === Heart) iconName = 'Heart';
-                            else if (component.icon === Share2) iconName = 'Share2';
-                            else if (component.icon === Download) iconName = 'Download';
-                            else if (component.icon === Upload) iconName = 'Upload';
-                            else if (component.icon === Lock) iconName = 'Lock';
-                            else if (component.icon === User) iconName = 'User';
-                            else if (component.icon === Award) iconName = 'Award';
-                            else if (component.icon === Bookmark) iconName = 'Bookmark';
-                            else if (component.icon === Tag) iconName = 'Tag';
-                            else if (component.icon === Search) iconName = 'Search';
-                            
-                            const IconComponent = iconMap[iconName] || Type;
-                            return <IconComponent className="w-4 h-4 text-muted-foreground mr-2" />;
-                          })()}
-                          <div>
-                            <span className="text-sm font-medium">{component.name}</span>
-                            <p className="text-xs text-muted-foreground">{component.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+    <>
+      {/* Code Modal */}
+      {showCodeModal && generatedCode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-auto p-6 relative">
+            <button
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-xl"
+              onClick={() => setShowCodeModal(false)}
+              aria-label="Close code modal"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-semibold mb-4">Generated Code</h2>
+            <pre className="whitespace-pre-wrap text-sm font-mono bg-gray-100 p-4 rounded overflow-x-auto">
+              {generatedCode}
+            </pre>
           </div>
         </div>
+      )}
 
-        {/* Canvas Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Canvas Toolbar */}
-          <div className="bg-card border-b border-border p-3 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Button
-                variant={selectedDevice === 'desktop' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setSelectedDevice('desktop')}
-                data-testid="button-device-desktop"
-              >
-                <Monitor className="w-4 h-4 mr-1" />
-                Desktop
-              </Button>
-              <Button
-                variant={selectedDevice === 'tablet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setSelectedDevice('tablet')}
-                data-testid="button-device-tablet"
-              >
-                <Tablet className="w-4 h-4 mr-1" />
-                Tablet
-              </Button>
-              <Button
-                variant={selectedDevice === 'mobile' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setSelectedDevice('mobile')}
-                data-testid="button-device-mobile"
-              >
-                <Smartphone className="w-4 h-4 mr-1" />
-                Mobile
-              </Button>
-            </div>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+
+        <div className="flex h-[calc(100vh-73px)]">
+          {viewMode === 'drag-drop' ? (
+            <>
+              {/* Component Palette */}
+              <div className="w-80 bg-card border-r border-border p-4 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-foreground">Components</h3>
+                  <Button
+                    size="sm"
+                    onClick={() => setViewMode('ai-build')}
+                    className="bg-gradient-to-r from-primary to-accent text-white hover:opacity-90"
+                    data-testid="button-build-with-ai"
+                  >
+                    <WandSparkles className="w-4 h-4 mr-1" />
+                    Build with AI
+                  </Button>
+                </div>
             
-            <div className="flex items-center space-x-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleGenerateCode}
-                disabled={isGeneratingCode || nodes.length === 0}
-                data-testid="button-generate-code"
-              >
-                {isGeneratingCode ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-1" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Code className="w-4 h-4 mr-1" />
-                    Generate Code
-                  </>
-                )}
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={handleUndo}
-                disabled={undoStack.length === 0}
-                data-testid="button-undo"
-              >
-                <Undo className="w-4 h-4" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                onClick={handleRedo}
-                disabled={redoStack.length === 0}
-                data-testid="button-redo"
-              >
-                <Redo className="w-4 h-4" />
-              </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={handleClearCanvas}
-                disabled={nodes.length === 0}
-                data-testid="button-clear-canvas"
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Clear
-              </Button>
+            {/* Search */}
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Search components..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+                data-testid="input-search-components"
+              />
+            </div>
+
+            {/* Component Categories */}
+            <div className="space-y-4">
+              {categories.map((category) => {
+                const categoryComponents = filteredComponents.filter(c => c.category === category);
+                if (categoryComponents.length === 0) return null;
+
+                return (
+                  <div key={category}>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                      {category}
+                    </h4>
+                    <div className="space-y-2">
+                      {categoryComponents.map((component) => (
+                        <div
+                          key={component.id}
+                          className="bg-background border border-border rounded-lg p-3 cursor-move hover:shadow-md hover:-translate-y-0.5 transition-all"
+                          onClick={() => handleComponentDrop(component)}
+                          data-testid={`component-${component.id}`}
+                        >
+                          <div className="flex items-center">
+                            {(() => {
+                              // Map icon components to their names and render safely
+                              const iconMap: Record<string, any> = {
+                                'Monitor': Monitor,
+                                'NavigationIcon': NavigationIcon,
+                                'Grid': Grid,
+                                'Star': Star,
+                                'Type': Type,
+                                'Image': Image,
+                                'MousePointer': MousePointer,
+                                'FileText': FileText,
+                                'CreditCard': CreditCard,
+                                'Video': Video,
+                                'Music': Music,
+                                'Calendar': Calendar,
+                                'MapPin': MapPin,
+                                'ShoppingCart': ShoppingCart,
+                                'Users': Users,
+                                'Mail': Mail,
+                                'Phone': Phone,
+                                'Clock': Clock,
+                                'Globe': Globe,
+                                'Layers': Layers,
+                                'Layout': Layout,
+                                'Columns': Columns,
+                                'BarChart3': BarChart3,
+                                'PieChart': PieChart,
+                                'TrendingUp': TrendingUp,
+                                'MessageSquare': MessageSquare,
+                                'Heart': Heart,
+                                'Share2': Share2,
+                                'Download': Download,
+                                'Upload': Upload,
+                                'Lock': Lock,
+                                'User': User,
+                                'Award': Award,
+                                'Bookmark': Bookmark,
+                                'Tag': Tag,
+                                'Search': Search,
+                              };
+                              
+                              // Get icon name from component
+                              let iconName = 'Type'; // fallback
+                              if (component.icon === Monitor) iconName = 'Monitor';
+                              else if (component.icon === NavigationIcon) iconName = 'NavigationIcon';
+                              else if (component.icon === Grid) iconName = 'Grid';
+                              else if (component.icon === Star) iconName = 'Star';
+                              else if (component.icon === Type) iconName = 'Type';
+                              else if (component.icon === Image) iconName = 'Image';
+                              else if (component.icon === MousePointer) iconName = 'MousePointer';
+                              else if (component.icon === FileText) iconName = 'FileText';
+                              else if (component.icon === CreditCard) iconName = 'CreditCard';
+                              else if (component.icon === Video) iconName = 'Video';
+                              else if (component.icon === Music) iconName = 'Music';
+                              else if (component.icon === Calendar) iconName = 'Calendar';
+                              else if (component.icon === MapPin) iconName = 'MapPin';
+                              else if (component.icon === ShoppingCart) iconName = 'ShoppingCart';
+                              else if (component.icon === Users) iconName = 'Users';
+                              else if (component.icon === Mail) iconName = 'Mail';
+                              else if (component.icon === Phone) iconName = 'Phone';
+                              else if (component.icon === Clock) iconName = 'Clock';
+                              else if (component.icon === Globe) iconName = 'Globe';
+                              else if (component.icon === Layers) iconName = 'Layers';
+                              else if (component.icon === Layout) iconName = 'Layout';
+                              else if (component.icon === Columns) iconName = 'Columns';
+                              else if (component.icon === BarChart3) iconName = 'BarChart3';
+                              else if (component.icon === PieChart) iconName = 'PieChart';
+                              else if (component.icon === TrendingUp) iconName = 'TrendingUp';
+                              else if (component.icon === MessageSquare) iconName = 'MessageSquare';
+                              else if (component.icon === Heart) iconName = 'Heart';
+                              else if (component.icon === Share2) iconName = 'Share2';
+                              else if (component.icon === Download) iconName = 'Download';
+                              else if (component.icon === Upload) iconName = 'Upload';
+                              else if (component.icon === Lock) iconName = 'Lock';
+                              else if (component.icon === User) iconName = 'User';
+                              else if (component.icon === Award) iconName = 'Award';
+                              else if (component.icon === Bookmark) iconName = 'Bookmark';
+                              else if (component.icon === Tag) iconName = 'Tag';
+                              else if (component.icon === Search) iconName = 'Search';
+                              
+                              const IconComponent = iconMap[iconName] || Type;
+                              return <IconComponent className="w-4 h-4 text-muted-foreground mr-2" />;
+                            })()}
+                            <div>
+                              <span className="text-sm font-medium">{component.name}</span>
+                              <p className="text-xs text-muted-foreground">{component.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Canvas */}
-          <div className="flex-1 bg-muted/20 relative">
-            <div 
-              className={`mx-auto transition-all duration-300 ${
-                selectedDevice === 'mobile' ? 'max-w-sm' :
-                selectedDevice === 'tablet' ? 'max-w-2xl' :
-                'w-full'
-              }`}
-              style={{
-                height: '100%',
-                border: selectedDevice !== 'desktop' ? '2px solid #e5e7eb' : 'none',
-                borderRadius: selectedDevice !== 'desktop' ? '12px' : '0',
-                backgroundColor: selectedDevice !== 'desktop' ? 'white' : 'transparent'
-              }}
-            >
+          {/* Canvas Area */}
+          <div className="flex-1 flex flex-col">
+            {/* Canvas Toolbar */}
+            <div className="bg-card border-b border-border p-3 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant={selectedDevice === 'desktop' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedDevice('desktop')}
+                  data-testid="button-device-desktop"
+                >
+                  <Monitor className="w-4 h-4 mr-1" />
+                  Desktop
+                </Button>
+                <Button
+                  variant={selectedDevice === 'tablet' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedDevice('tablet')}
+                  data-testid="button-device-tablet"
+                >
+                  <Tablet className="w-4 h-4 mr-1" />
+                  Tablet
+                </Button>
+                <Button
+                  variant={selectedDevice === 'mobile' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSelectedDevice('mobile')}
+                  data-testid="button-device-mobile"
+                >
+                  <Smartphone className="w-4 h-4 mr-1" />
+                  Mobile
+                </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                  data-testid="button-undo"
+                >
+                  <Undo className="w-4 h-4 mr-1" />
+                  Undo
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRedo}
+                  disabled={redoStack.length === 0}
+                  data-testid="button-redo"
+                >
+                  <Redo className="w-4 h-4 mr-1" />
+                  Redo
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearCanvas}
+                  disabled={nodes.length === 0}
+                  data-testid="button-clear-canvas"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+                <Button
+                  onClick={handleGenerateCode}
+                  disabled={nodes.length === 0 || isGeneratingCode}
+                  className="bg-gradient-to-r from-primary to-accent text-white hover:opacity-90"
+                  data-testid="button-generate-code"
+                >
+                  <Code className="w-4 h-4 mr-1" />
+                  {isGeneratingCode ? 'Generating...' : 'Generate Code'}
+                </Button>
+              </div>
+            </div>
+
+            {/* ReactFlow Canvas */}
+            <div className="flex-1 relative bg-muted/50">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
-                onNodeClick={(_, node) => setSelectedComponent(node.id)}
-                onPaneClick={() => setSelectedComponent(null)}
                 nodeTypes={nodeTypes}
-                connectionMode="loose"
-                snapToGrid={true}
-                snapGrid={[20, 20]}
                 fitView
+                minZoom={0.1}
+                maxZoom={2}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                className="bg-background"
               >
-                <Controls />
-                <MiniMap />
-                <Background variant={"dots" as any} gap={20} size={1} />
+                <Controls position="top-right" />
+                <MiniMap 
+                  position="bottom-right" 
+                  nodeColor="#3b82f6"
+                  zoomable
+                  pannable
+                />
+                <Background gap={20} size={1} color="#e5e7eb" />
               </ReactFlow>
             </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 p-8 overflow-y-auto">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold text-foreground">Build with AI</h2>
+              <Button
+                variant="ghost"
+                onClick={() => setViewMode('drag-drop')}
+                data-testid="button-back-to-canvas"
+              >
+                ← Back to Canvas
+              </Button>
+            </div>
 
-            {/* Empty Canvas Message (only for drag-drop mode) */}
-            {nodes.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-muted/20">
-                <div className="text-center max-w-2xl pointer-events-auto">
-                  <Grid className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-2xl font-medium text-foreground mb-2">
-                    Start Building Your Website
-                  </h3>
-                  <p className="text-muted-foreground mb-8">
-                    Drag components from the left panel to design your website visually
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <Card 
+                className={`cursor-pointer transition-all hover:shadow-lg ${
+                  aiMode === 'flow' ? 'border-accent ring-2 ring-accent/20' : ''
+                }`}
+                onClick={() => setAiMode('flow')}
+                data-testid="card-ai-flow"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <NavigationIcon className="w-5 h-5 mr-2 text-accent" />
+                    Flow Builder
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Create interactive workflows and process diagrams with AI assistance. Perfect for user journeys, business processes, and complex interactions.
                   </p>
-                  
-                  <div className="bg-card border border-border rounded-lg p-6 mt-8">
-                    <h4 className="font-medium mb-4">Quick Start Tips:</h4>
-                    <div className="space-y-2 text-sm text-muted-foreground text-left">
-                      <p>• Choose components from the left sidebar</p>
-                      <p>• Click components to add them to your canvas</p>
-                      <p>• Drag from the connection points (small circles) to connect components</p>
-                      <p>• Select components to edit their properties</p>
-                      <p>• Use the "Build with AI" button for AI assistance</p>
-                    </div>
-                  </div>
-                  
-                  {projects && Array.isArray(projects) && projects.length > 0 && (
-                    <div className="bg-card border border-border rounded-lg p-4 mt-4">
-                      <h4 className="font-medium mb-2">Your Recent Projects</h4>
-                      <div className="space-y-2">
-                        {projects.slice(0, 2).map((project: Project) => (
-                          <div key={project.id} className="flex items-center justify-between text-sm">
-                            <span>{project.title}</span>
-                            <Badge variant="secondary">{project.isPublished ? 'Published' : 'Draft'}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </CardContent>
+              </Card>
+
+              <Card 
+                className={`cursor-pointer transition-all hover:shadow-lg ${
+                  aiMode === 'webapp' ? 'border-accent ring-2 ring-accent/20' : ''
+                }`}
+                onClick={() => setAiMode('webapp')}
+                data-testid="card-ai-webapp"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Code className="w-5 h-5 mr-2 text-accent" />
+                    Web App Builder
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Generate complete web applications from natural language descriptions. Get full HTML, CSS, and JavaScript code ready to deploy.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {aiMode && (
+              <div className="space-y-4">
+                <BuildFromPromptForm 
+                  mode={aiMode}
+                  onSuccess={(result) => {
+                    setGeneratedCode(result.htmlCode);
+                    setShowCodeModal(true);
+                    setAiMode(null);
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => setAiMode(null)}
+                  className="w-full"
+                  data-testid="button-cancel-ai-build"
+                >
+                  Cancel
+                </Button>
               </div>
             )}
           </div>
         </div>
-
-        {/* Properties Panel */}
-        <div className="w-80 bg-card border-l border-border p-4 overflow-y-auto">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Properties</h3>
-          
-          {selectedComponent ? (
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Styling
-                </h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Background Color
-                    </label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="color"
-                        defaultValue="#ffffff"
-                        className="w-10 h-8 rounded border border-border cursor-pointer"
-                        data-testid="input-background-color"
-                        onChange={(e) => {
-                          const node = nodes.find(n => n.id === selectedComponent);
-                          if (node) {
-                            setNodes(nodes.map(n => n.id === selectedComponent ? {
-                              ...n,
-                              style: { ...n.style, background: e.target.value },
-                              data: {
-                                ...n.data,
-                                properties: {
-                                  ...n.data.properties,
-                                  backgroundColor: e.target.value
-                                }
-                              }
-                            } : n));
-                          }
-                        }}
-                      />
-                      <Input
-                        type="text"
-                        defaultValue="#ffffff"
-                        className="flex-1 text-sm"
-                        data-testid="input-background-color-text"
-                        onChange={(e) => {
-                          const node = nodes.find(n => n.id === selectedComponent);
-                          if (node && /^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                            setNodes(nodes.map(n => n.id === selectedComponent ? {
-                              ...n,
-                              style: { ...n.style, background: e.target.value },
-                              data: {
-                                ...n.data,
-                                properties: {
-                                  ...n.data.properties,
-                                  backgroundColor: e.target.value
-                                }
-                              }
-                            } : n));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Text Color
-                    </label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="color"
-                        defaultValue="#1f2937"
-                        className="w-10 h-8 rounded border border-border cursor-pointer"
-                        data-testid="input-text-color"
-                        onChange={(e) => {
-                          const node = nodes.find(n => n.id === selectedComponent);
-                          if (node) {
-                            setNodes(nodes.map(n => n.id === selectedComponent ? {
-                              ...n,
-                              style: { ...n.style, color: e.target.value },
-                              data: {
-                                ...n.data,
-                                properties: {
-                                  ...n.data.properties,
-                                  textColor: e.target.value
-                                }
-                              }
-                            } : n));
-                          }
-                        }}
-                      />
-                      <Input
-                        type="text"
-                        defaultValue="#1f2937"
-                        className="flex-1 text-sm"
-                        data-testid="input-text-color-text"
-                        onChange={(e) => {
-                          const node = nodes.find(n => n.id === selectedComponent);
-                          if (node && /^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                            setNodes(nodes.map(n => n.id === selectedComponent ? {
-                              ...n,
-                              style: { ...n.style, color: e.target.value },
-                              data: {
-                                ...n.data,
-                                properties: {
-                                  ...n.data.properties,
-                                  textColor: e.target.value
-                                }
-                              }
-                            } : n));
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Layout
-                </h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Width
-                    </label>
-                    <select 
-                      className="w-full px-3 py-2 bg-background border border-border rounded text-sm"
-                      onChange={(e) => {
-                        const node = nodes.find(n => n.id === selectedComponent);
-                        if (node) {
-                          let width = 'auto';
-                          switch(e.target.value) {
-                            case 'Full Width':
-                              width = '100%';
-                              break;
-                            case 'Custom':
-                              width = '300px';
-                              break;
-                            default:
-                              width = 'auto';
-                          }
-                          setNodes(nodes.map(n => n.id === selectedComponent ? {
-                            ...n,
-                            style: { ...n.style, width },
-                            data: {
-                              ...n.data,
-                              properties: {
-                                ...n.data.properties,
-                                width: e.target.value
-                              }
-                            }
-                          } : n));
-                        }
-                      }}
-                    >
-                      <option>Auto</option>
-                      <option>Full Width</option>
-                      <option>Custom</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">
-                      Actions
-                    </label>
-                    <div className="space-y-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setNodes(nodes.filter(n => n.id !== selectedComponent));
-                          setSelectedComponent(null);
-                          toast({
-                            title: "Component Deleted",
-                            description: "Component has been removed from canvas",
-                          });
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Component
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          const node = nodes.find(n => n.id === selectedComponent);
-                          if (node) {
-                            const duplicatedNode = {
-                              ...node,
-                              id: `${node.data.componentType}-${Date.now()}`,
-                              position: {
-                                x: node.position.x + 20,
-                                y: node.position.y + 20
-                              }
-                            };
-                            setNodes(nodes => [...nodes, duplicatedNode]);
-                            toast({
-                              title: "Component Duplicated",
-                              description: "Component has been duplicated",
-                            });
-                          }
-                        }}
-                      >
-                        Duplicate Component
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Settings className="w-8 h-8 mx-auto mb-2" />
-              <p className="text-sm">Select a component to edit its properties</p>
-            </div>
-          )}
-        </div>
-        </>
-        ) : (
-          /* AI Build Mode */
-          <div className="w-full flex flex-col">
-            {/* AI Build Header */}
-            <div className="bg-card border-b border-border p-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <WandSparkles className="w-6 h-6 text-accent" />
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground">AI Website Builder</h2>
-                  <p className="text-sm text-muted-foreground">Describe your website and let AI build it for you</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setViewMode('drag-drop')}
-                data-testid="button-back-to-drag-drop"
-              >
-                Back to Drag & Drop
-              </Button>
-            </div>
-
-            {/* AI Build Content */}
-            <div className="flex-1 p-8 bg-muted/20">
-              <div className="max-w-4xl mx-auto">
-                {!aiMode ? (
-                  /* Mode Selection */
-                  <>
-                    <div className="text-center mb-8">
-                      <Star className="w-16 h-16 text-accent mx-auto mb-4" />
-                      <h3 className="text-3xl font-bold text-foreground mb-4">
-                        Choose Your AI Building Mode
-                      </h3>
-                      <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Select how you want AI to help you build your project
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                      {/* Flow Builder Mode */}
-                      <div 
-                        className="bg-card border border-border rounded-xl p-8 cursor-pointer hover:border-accent transition-all hover:shadow-lg group"
-                        onClick={() => setAiMode('flow')}
-                      >
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
-                            <Grid className="w-8 h-8 text-blue-600" />
-                          </div>
-                          <h4 className="text-xl font-bold text-foreground mb-3">Make Flow with AI</h4>
-                          <p className="text-muted-foreground mb-6">
-                            Create interactive flowcharts, diagrams, and visual workflows. Perfect for process mapping, user journeys, and system designs.
-                          </p>
-                          <ul className="text-sm text-muted-foreground text-left space-y-2">
-                            <li>• Interactive flowcharts</li>
-                            <li>• Process diagrams</li>
-                            <li>• User journey maps</li>
-                            <li>• System workflows</li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* WebApp Builder Mode */}
-                      <div 
-                        className="bg-card border border-border rounded-xl p-8 cursor-pointer hover:border-accent transition-all hover:shadow-lg group"
-                        onClick={() => setAiMode('webapp')}
-                      >
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
-                            <Code className="w-8 h-8 text-purple-600" />
-                          </div>
-                          <h4 className="text-xl font-bold text-foreground mb-3">Build Full WebApp with AI</h4>
-                          <p className="text-muted-foreground mb-6">
-                            Generate complete web applications with components, pages, and functionality. Ideal for landing pages, portfolios, and full websites.
-                          </p>
-                          <ul className="text-sm text-muted-foreground text-left space-y-2">
-                            <li>• Complete web applications</li>
-                            <li>• React components</li>
-                            <li>• Responsive design</li>
-                            <li>• Full code generation</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  /* Selected Mode Interface */
-                  <>
-                    <div className="text-center mb-8">
-                      <Button
-                        variant="ghost"
-                        onClick={() => setAiMode(null)}
-                        className="mb-4"
-                      >
-                        ← Back to Mode Selection
-                      </Button>
-                      
-                      {aiMode === 'flow' ? (
-                        <>
-                          <Grid className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-                          <h3 className="text-3xl font-bold text-foreground mb-4">
-                            Create Flow with AI
-                          </h3>
-                          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Describe the process or workflow you want to visualize, and AI will create an interactive flowchart for you.
-                          </p>
-                        </>
-                      ) : (
-                        <>  
-                          <Code className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-                          <h3 className="text-3xl font-bold text-foreground mb-4">
-                            Build WebApp with AI
-                          </h3>
-                          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Describe the web application you want to build, and AI will generate a complete, interactive website that you can preview immediately in your browser.
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* AI Build Form */}
-                    <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
-                      <BuildFromPromptForm 
-                        mode={aiMode}
-                        onSuccess={(result) => {
-                          if (aiMode === 'webapp') {
-                            // For webapp mode, redirect to preview the generated website
-                            if (result && result.project && result.project.id) {
-                              toast({
-                                title: "WebApp Generated!",
-                                description: "Your web application is ready! Opening preview...",
-                              });
-                              
-                              // Open preview in new tab
-                              setTimeout(() => {
-                                window.open(`/api/preview/${result.project.id}`, '_blank');
-                              }, 1000);
-                              
-                              // Reset mode
-                              setAiMode(null);
-                              setViewMode('drag-drop');
-                            } else {
-                              toast({
-                                title: "WebApp Generated!",
-                                description: "Your web application is ready!",
-                              });
-                              setAiMode(null);
-                              setViewMode('drag-drop');
-                            }
-                          } else {
-                            // Flow mode - Generate components from AI response and switch back to drag-drop mode
-                            if (result && result.generated && result.generated.components) {
-                              const components = result.generated.components;
-                              const aiGeneratedNodes = components.map((component: any, index: number) => {
-                                const getComponentContent = (comp: any, mode: 'flow' | 'webapp') => {
-                                  const type = comp.type?.toLowerCase() || 'component';
-                                  
-                                  if (mode === 'flow') {
-                                    // Flow-specific components
-                                    if (type.includes('start') || type.includes('begin')) {
-                                      return {
-                                        iconName: 'Star',
-                                        name: 'Start Node',
-                                        content: 'Starting point of the workflow',
-                                        description: 'Initial step in the process flow'
-                                      };
-                                    } else if (type.includes('decision') || type.includes('condition')) {
-                                      return {
-                                        iconName: 'Grid',
-                                        name: 'Decision Point',
-                                        content: 'Conditional branch in the flow',
-                                        description: 'Yes/No decision making step'
-                                      };
-                                    } else if (type.includes('process') || type.includes('action')) {
-                                      return {
-                                        iconName: 'CreditCard',
-                                        name: 'Process Step',
-                                        content: 'Action or process execution',
-                                        description: 'Main workflow processing step'
-                                      };
-                                    } else if (type.includes('end') || type.includes('finish')) {
-                                      return {
-                                        iconName: 'Type',
-                                        name: 'End Node',
-                                        content: 'Workflow completion point',
-                                        description: 'Final step in the process'
-                                      };
-                                    } else {
-                                      return {
-                                        iconName: 'MousePointer',
-                                        name: comp.name || 'Flow Element',
-                                        content: comp.content || 'Custom flow step',
-                                        description: comp.description || 'AI-generated flow component'
-                                      };
-                                    }
-                                  } else {
-                                    // This shouldn't be reached in flow mode, but keeping for safety
-                                    return {
-                                      iconName: 'Monitor',
-                                      name: comp.name || 'Flow Component',
-                                      content: comp.content || 'Custom flow element',
-                                      description: comp.description || 'AI-generated component'
-                                    };
-                                  }
-                                };
-                                
-                                const componentData = getComponentContent(component, aiMode);
-                                
-                                return {
-                                  id: `ai-${component.type}-${Date.now()}-${index}`,
-                                  type: 'component',
-                                  position: { x: 100 + (index * 250), y: 100 + (Math.floor(index / 3) * 180) },
-                                  data: {
-                                    iconName: componentData.iconName,
-                                    componentType: component.type,
-                                    componentName: componentData.name,
-                                    componentContent: componentData.content,
-                                    componentDescription: componentData.description,
-                                    aiGenerated: true,
-                                    aiMode: aiMode,
-                                    htmlCode: result.generated.htmlCode,
-                                    cssCode: result.generated.cssCode,
-                                    jsCode: result.generated.jsCode,
-                                    properties: {
-                                      backgroundColor: '#ffffff',
-                                      textColor: '#1f2937',
-                                      width: 'auto',
-                                    }
-                                  },
-                                };
-                              });
-                              
-                              // Save current state for undo
-                              setUndoStack(prev => [...prev, { nodes, edges }]);
-                              setRedoStack([]); // Clear redo stack
-                              
-                              // Add the AI generated nodes
-                              setNodes(aiGeneratedNodes);
-                              
-                              // Reset AI mode and switch back to drag-drop mode
-                              setAiMode(null);
-                              setViewMode('drag-drop');
-                              
-                              toast({
-                                title: "Flow Generated!",
-                                description: `Created ${components.length} components from your prompt. You can now customize them!`,
-                              });
-                            } else {
-                              // Reset mode and switch back anyway to show the updated interface
-                              setAiMode(null);
-                              setViewMode('drag-drop');
-                              
-                              toast({
-                                title: "Flow Generated!",
-                                description: "Your AI-generated project is ready. Check the Code Preview to see the full code!",
-                              });
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-
-                    {/* Mode-specific Examples */}
-                    <div className="mt-12">
-                      <h4 className="text-lg font-semibold text-foreground mb-4 text-center">
-                        {aiMode === 'flow' ? 'Flow Examples' : 'WebApp Examples'}
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(aiMode === 'flow' ? [
-                          "Create a user registration flow with validation steps",
-                          "Design an e-commerce checkout process workflow",
-                          "Map out a customer support ticket resolution process",
-                          "Build a software deployment pipeline diagram"
-                        ] : [
-                          "Create a modern SaaS landing page with pricing, features, and testimonials",
-                          "Build a professional portfolio website with project gallery and contact form",
-                          "Design an e-commerce store with product catalog and shopping cart",
-                          "Make a restaurant website with menu, photo gallery, and online booking"
-                        ]).map((example, index) => (
-                          <div key={index} className="bg-background border border-border rounded-lg p-4 cursor-pointer hover:border-accent transition-colors">
-                            <p className="text-sm text-muted-foreground">{example}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
+      )}
     </div>
-  );
+  </div>
+</>
+);
 }
