@@ -84,8 +84,16 @@ const generatedFiles = [
 export default function BackendBuilder() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [selectedDatabase, setSelectedDatabase] = useState('MongoDB');
-  const [selectedFramework, setSelectedFramework] = useState('Express.js');
+
+  // Load settings from localStorage or use defaults
+  const [selectedDatabase, setSelectedDatabase] = useState(() => {
+    const saved = localStorage.getItem('backend-builder-database');
+    return saved || 'MongoDB';
+  });
+  const [selectedFramework, setSelectedFramework] = useState(() => {
+    const saved = localStorage.getItem('backend-builder-framework');
+    return saved || 'Express.js';
+  });
   const [features, setFeatures] = useState({
     userAuth: true,
     crudOps: true,
@@ -104,6 +112,18 @@ export default function BackendBuilder() {
     passwordHashing: true,
     rateLimiting: false,
   });
+
+  // Save database selection to localStorage
+  const handleDatabaseChange = (value: string) => {
+    setSelectedDatabase(value);
+    localStorage.setItem('backend-builder-database', value);
+  };
+
+  // Save framework selection to localStorage
+  const handleFrameworkChange = (value: string) => {
+    setSelectedFramework(value);
+    localStorage.setItem('backend-builder-framework', value);
+  };
 
   const handleGenerateBackend = async () => {
     setIsGenerating(true);
@@ -582,10 +602,10 @@ export default function BackendBuilder() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Database Provider
               </label>
-              <select 
+              <select
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
                 value={selectedDatabase}
-                onChange={(e) => setSelectedDatabase(e.target.value)}
+                onChange={(e) => handleDatabaseChange(e.target.value)}
                 data-testid="select-database"
               >
                 <option>MongoDB</option>
@@ -598,10 +618,10 @@ export default function BackendBuilder() {
               <label className="block text-sm font-medium text-foreground mb-2">
                 Framework
               </label>
-              <select 
+              <select
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
                 value={selectedFramework}
-                onChange={(e) => setSelectedFramework(e.target.value)}
+                onChange={(e) => handleFrameworkChange(e.target.value)}
                 data-testid="select-framework"
               >
                 <option>Express.js</option>
