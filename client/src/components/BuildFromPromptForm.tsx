@@ -19,22 +19,29 @@ export default function BuildFromPromptForm({ onSuccess, mode }: BuildFromPrompt
 
   const buildFromPromptMutation = useMutation({
     mutationFn: async (userPrompt: string) => {
-      const response = await apiRequest('POST', '/api/ai/build-from-prompt', { 
+      console.log('BuildFromPromptForm: Making API request with prompt:', userPrompt.substring(0, 50) + '...');
+      console.log('BuildFromPromptForm: Mode:', mode);
+      const response = await apiRequest('POST', '/api/ai/build-from-prompt', {
         prompt: userPrompt,
         mode: mode || 'webapp' // Include mode in the request
       });
-      return response.json();
+      const result = await response.json();
+      console.log('BuildFromPromptForm: API response:', result);
+      return result;
     },
     onSuccess: (result) => {
+      console.log('BuildFromPromptForm: Success! Result:', result);
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
         title: "Project Created!",
         description: `Successfully generated "${result.project?.title || 'Website'}" from your prompt`,
       });
       setPrompt("");
+      console.log('BuildFromPromptForm: Calling onSuccess with result');
       onSuccess(result);
     },
     onError: (error) => {
+      console.error('BuildFromPromptForm: Error:', error);
       toast({
         title: "Generation Failed",
         description: error instanceof Error ? error.message : "Failed to build from prompt",
