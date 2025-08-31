@@ -77,7 +77,7 @@ const deploymentProviders: DeploymentProvider[] = [
   },
 ];
 
-const deploymentHistory: Deployment[] = [
+const initialDeploymentHistory: Deployment[] = [
   {
     id: '1',
     type: 'Production Deploy',
@@ -137,6 +137,10 @@ export default function Deploy() {
       { key: 'DATABASE_URL', value: '••••••••••••' },
     ];
   });
+  const [deploymentHistory, setDeploymentHistory] = useState<Deployment[]>(() => {
+    const saved = localStorage.getItem('deploy-history');
+    return saved ? JSON.parse(saved) : initialDeploymentHistory;
+  });
 
   // Save project name to localStorage
   const handleProjectNameChange = (value: string) => {
@@ -169,30 +173,125 @@ export default function Deploy() {
   };
 
   const handleDeploy = async () => {
-    setIsDeploying(true);
-    
-    // Simulate deployment process with progress updates
-    const steps = [
-      'Preparing deployment...',
-      'Building application...',
-      'Uploading assets...',
-      'Configuring server...',
-      'Starting application...'
-    ];
-    
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 600));
+    console.log('🚀 CLIENT: Starting deployment process');
+    console.log('Selected provider:', selectedProvider);
+    console.log('Project name:', projectName);
+    console.log('Environment:', environment);
+
+    if (selectedProvider !== 'vercel') {
+      console.log('❌ CLIENT: Provider not supported:', selectedProvider);
       toast({
-        title: "Deploying",
-        description: steps[i],
+        title: "Provider Not Supported",
+        description: `${selectedProvider} deployment is not yet implemented. Please select Vercel.`,
+        variant: "destructive",
       });
+      return;
     }
-    
-    setIsDeploying(false);
-    toast({
-      title: "Deployment Successful!",
-      description: `Your website is now live at ${projectName}.${selectedProvider === 'vercel' ? 'vercel.app' : selectedProvider === 'netlify' ? 'netlify.app' : 'aws.com'}`,
-    });
+
+    setIsDeploying(true);
+    console.log('✅ CLIENT: Set deploying state to true');
+
+    try {
+      // Show initial deployment message
+      console.log('📢 CLIENT: Showing initial deployment toast');
+      toast({
+        title: "Starting Deployment",
+        description: "Preparing to deploy to Vercel...",
+      });
+
+      // Prepare request payload
+      const requestPayload = {
+        projectName,
+        customDomain,
+        environment,
+        envVars,
+        buildCommand: 'npm run build',
+        outputDir: 'dist'
+      };
+      console.log('📤 CLIENT: Prepared request payload:', JSON.stringify(requestPayload, null, 2));
+
+      // Call the Vercel deployment API
+      console.log('🌐 CLIENT: Making fetch request to /api/deploy/vercel');
+      const response = await fetch('/api/deploy/vercel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      console.log('📥 CLIENT: Received response');
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        console.log('❌ CLIENT: Response not ok, reading error response');
+        const errorText = await response.text();
+        console.log('Error response text:', errorText);
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch (parseError) {
+          console.log('Failed to parse error as JSON:', parseError);
+          error = { message: errorText };
+        }
+        throw new Error(error.message || 'Failed to deploy to Vercel');
+      }
+
+      console.log('✅ CLIENT: Response ok, parsing JSON');
+      const result = await response.json();
+      console.log('📋 CLIENT: Parsed response:', JSON.stringify(result, null, 2));
+
+      // Show success message with actual deployment URL
+      console.log('🎉 CLIENT: Showing success toast');
+      toast({
+        title: "Deployment Successful!",
+        description: `Your website is now live at ${result.deploymentUrl}`,
+      });
+
+      // Update deployment history
+      const newDeployment: Deployment = {
+        id: result.deploymentId,
+        type: `${environment} Deploy`,
+        date: new Date().toLocaleString(),
+        status: 'live' as const,
+        url: result.deploymentUrl.replace('https://', ''),
+        buildTime: result.buildTime,
+      };
+
+      console.log('📝 CLIENT: Created new deployment record:', newDeployment);
+
+      // Add to deployment history and save to localStorage
+      const updatedHistory = [newDeployment, ...deploymentHistory];
+      setDeploymentHistory(updatedHistory);
+      localStorage.setItem('deploy-history', JSON.stringify(updatedHistory));
+
+      console.log('💾 CLIENT: Updated deployment history in localStorage');
+
+      // Open the deployment in a new tab
+      setTimeout(() => {
+        console.log('🔗 CLIENT: Opening deployment URL in new tab:', result.deploymentUrl);
+        window.open(result.deploymentUrl, '_blank');
+      }, 1000);
+
+    } catch (error) {
+      console.error("❌ CLIENT: Deployment error:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error instanceof Error:", error instanceof Error);
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      toast({
+        title: "Deployment Failed",
+        description: error instanceof Error ? error.message : "Failed to deploy to Vercel",
+        variant: "destructive",
+      });
+    } finally {
+      console.log('🏁 CLIENT: Setting deploying state to false');
+      setIsDeploying(false);
+    }
   };
 
   const handleProviderSelect = (providerId: string) => {
@@ -493,7 +592,7 @@ export default function Deploy() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {deploymentHistory.map((deployment) => (
+              {deploymentHistory.map((deployment: Deployment) => (
                 <div
                   key={deployment.id}
                   className="flex items-center justify-between p-4 bg-background rounded-lg border border-border"

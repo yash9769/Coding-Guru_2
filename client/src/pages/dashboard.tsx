@@ -141,25 +141,11 @@ const ComponentNode = ({ data, selected, id }: { data: any; selected: boolean; i
 
   const IconComponent = data.iconName ? iconMap[data.iconName] || Type : data.icon || Type;
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (data.onDelete) {
-      data.onDelete(id);
-    }
-  };
 
   return (
     <div className={`flex flex-col p-3 min-w-[200px] bg-white border-2 rounded-lg transition-all relative group ${
       selected ? 'border-accent shadow-lg' : 'border-gray-200'
     }`}>
-      {/* Delete button */}
-      <button
-        onClick={handleDelete}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs hover:bg-red-600 z-10"
-        title="Delete component"
-      >
-        ×
-      </button>
 
       {/* ReactFlow connection handles */}
       <Handle
@@ -639,25 +625,6 @@ export default function Dashboard() {
     });
   };
 
-  const handleDeleteNode = (nodeId: string) => {
-    // Save current state for undo
-    setUndoStack(prev => [...prev, { nodes, edges }]);
-    setRedoStack([]);
-
-    // Remove the node and any connected edges
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-
-    // Clear selection if the deleted node was selected
-    if (selectedComponent === nodeId) {
-      setSelectedComponent(null);
-    }
-
-    toast({
-      title: "Component Deleted",
-      description: "Component has been removed from the canvas",
-    });
-  };
 
   const handleComponentDrop = (component: ComponentPaletteItem) => {
     console.log('Component drop initiated:', component.name);
@@ -740,7 +707,6 @@ export default function Dashboard() {
         componentName: component.name,
         componentDescription: component.description,
         category: component.category,
-        onDelete: handleDeleteNode,
         properties: {
           backgroundColor: '#ffffff',
           textColor: '#1f2937',
@@ -1209,6 +1175,16 @@ export default function Dashboard() {
                 maxZoom={2}
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 className="bg-background"
+                nodesDraggable={true}
+                nodesConnectable={true}
+                elementsSelectable={true}
+                selectNodesOnDrag={false}
+                panOnDrag={true}
+                panOnScroll={true}
+                zoomOnScroll={true}
+                zoomOnPinch={true}
+                zoomOnDoubleClick={true}
+                preventScrolling={true}
               >
                 <Controls position="top-right" />
                 <MiniMap
@@ -1246,7 +1222,6 @@ export default function Dashboard() {
                   setAiMode('flow');
                   setViewMode('drag-drop'); // Stay on drag-drop view
                   console.log('AI mode set to flow, staying on drag-drop view');
-                  alert('Flow Builder selected! You can now drag and drop flow components on the canvas.');
                 }}
                 data-testid="card-ai-flow"
               >
@@ -1272,7 +1247,6 @@ export default function Dashboard() {
                   setAiMode('webapp');
                   setViewMode('drag-drop'); // Stay on drag-drop view
                   console.log('AI mode set to webapp, staying on drag-drop view');
-                  alert('Web App Builder selected! You can now drag and drop web components on the canvas.');
                 }}
                 data-testid="card-ai-webapp"
               >

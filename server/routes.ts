@@ -277,24 +277,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vercel deployment route
+  app.post("/api/deploy/vercel", async (req: any, res) => {
+    console.log('🔍 DEPLOYMENT REQUEST RECEIVED');
+    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+    try {
+      const {
+        projectName,
+        customDomain,
+        environment,
+        envVars,
+        buildCommand = 'npm run build',
+        outputDir = 'dist'
+      } = req.body;
+
+      console.log('📋 Extracted deployment parameters:');
+      console.log('- Project Name:', projectName);
+      console.log('- Custom Domain:', customDomain);
+      console.log('- Environment:', environment);
+      console.log('- Build Command:', buildCommand);
+      console.log('- Output Dir:', outputDir);
+      console.log('- Environment Variables Count:', envVars?.length || 0);
+
+      if (!projectName) {
+        console.log('❌ ERROR: Project name is required');
+        return res.status(400).json({
+          message: "Project name is required"
+        });
+      }
+
+      console.log('✅ Starting Vercel deployment simulation for:', projectName);
+
+      // For demo purposes, we'll simulate a Vercel deployment
+      // In a real implementation, you would:
+      // 1. Use Vercel API to create a deployment
+      // 2. Upload built files to Vercel
+      // 3. Get the actual deployment URL
+
+      // Simulate deployment steps
+      const deploymentSteps = [
+        'Preparing deployment...',
+        'Building application...',
+        'Uploading assets...',
+        'Configuring server...',
+        'Starting application...'
+      ];
+
+      console.log('⏳ Simulating deployment steps...');
+      for (const step of deploymentSteps) {
+        console.log(`  ${step}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Simulate deployment time
+      console.log('⏱️  Simulating deployment time (3 seconds)...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Generate a realistic Vercel deployment URL
+      const deploymentId = Math.random().toString(36).substring(2, 15);
+      const deploymentUrl = customDomain
+        ? `https://${customDomain}`
+        : `https://${projectName}-${deploymentId}.vercel.app`;
+
+      console.log('🎉 Deployment simulation completed successfully!');
+      console.log('Deployment URL:', deploymentUrl);
+      console.log('Deployment ID:', deploymentId);
+
+      const responseData = {
+        success: true,
+        deploymentUrl,
+        deploymentId,
+        projectName,
+        environment,
+        buildTime: '45s',
+        status: 'ready'
+      };
+
+      console.log('📤 Sending response:', JSON.stringify(responseData, null, 2));
+      res.json(responseData);
+
+    } catch (error) {
+      console.error("❌ DEPLOYMENT ERROR:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+      res.status(500).json({
+        message: "Failed to deploy to Vercel",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Webapp preview route
   app.get("/api/preview/:projectId", isAuthenticated, async (req: any, res) => {
     try {
       const { projectId } = req.params;
       const userId = req.user.claims.sub;
-      
+
       // Get project from storage
       const project = await storage.getProject(projectId);
-      
+
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
-      
+
       // Check if user owns the project
       if (project.userId !== userId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      
+
       // Generate HTML page with project content
       const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -314,7 +405,7 @@ ${project.jsCode || ''}
   </script>
 </body>
 </html>`;
-      
+
       res.setHeader('Content-Type', 'text/html');
       res.send(htmlContent);
     } catch (error) {
