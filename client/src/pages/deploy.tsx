@@ -41,6 +41,11 @@ interface Deployment {
   buildTime?: string;
 }
 
+interface EnvVar {
+  key: string;
+  value: string;
+}
+
 const deploymentProviders: DeploymentProvider[] = [
   {
     id: 'vercel',
@@ -106,15 +111,62 @@ const projectStats = [
 export default function Deploy() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [projectName, setProjectName] = useState('my-ai-website');
-  const [customDomain, setCustomDomain] = useState('');
-  const [environment, setEnvironment] = useState('Production');
+
+  // Load settings from localStorage or use defaults
+  const [projectName, setProjectName] = useState(() => {
+    const saved = localStorage.getItem('deploy-project-name');
+    return saved || 'my-ai-website';
+  });
+  const [customDomain, setCustomDomain] = useState(() => {
+    const saved = localStorage.getItem('deploy-custom-domain');
+    return saved || '';
+  });
+  const [environment, setEnvironment] = useState(() => {
+    const saved = localStorage.getItem('deploy-environment');
+    return saved || 'Production';
+  });
   const [isDeploying, setIsDeploying] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState('vercel');
-  const [envVars, setEnvVars] = useState([
-    { key: 'NODE_ENV', value: 'production' },
-    { key: 'DATABASE_URL', value: '••••••••••••' },
-  ]);
+  const [selectedProvider, setSelectedProvider] = useState(() => {
+    const saved = localStorage.getItem('deploy-provider');
+    return saved || 'vercel';
+  });
+  const [envVars, setEnvVars] = useState<EnvVar[]>(() => {
+    const saved = localStorage.getItem('deploy-env-vars');
+    return saved ? JSON.parse(saved) : [
+      { key: 'NODE_ENV', value: 'production' },
+      { key: 'DATABASE_URL', value: '••••••••••••' },
+    ];
+  });
+
+  // Save project name to localStorage
+  const handleProjectNameChange = (value: string) => {
+    setProjectName(value);
+    localStorage.setItem('deploy-project-name', value);
+  };
+
+  // Save custom domain to localStorage
+  const handleCustomDomainChange = (value: string) => {
+    setCustomDomain(value);
+    localStorage.setItem('deploy-custom-domain', value);
+  };
+
+  // Save environment to localStorage
+  const handleEnvironmentChange = (value: string) => {
+    setEnvironment(value);
+    localStorage.setItem('deploy-environment', value);
+  };
+
+  // Save provider selection to localStorage
+  const handleProviderChange = (providerId: string) => {
+    setSelectedProvider(providerId);
+    localStorage.setItem('deploy-provider', providerId);
+  };
+
+  // Save environment variables to localStorage
+  const handleEnvVarsChange = (newEnvVars: Array<{ key: string; value: string }>) => {
+    setEnvVars(newEnvVars);
+    localStorage.setItem('deploy-env-vars', JSON.stringify(newEnvVars));
+  };
 
   const handleDeploy = async () => {
     setIsDeploying(true);
@@ -144,7 +196,7 @@ export default function Deploy() {
   };
 
   const handleProviderSelect = (providerId: string) => {
-    setSelectedProvider(providerId);
+    handleProviderChange(providerId);
     toast({
       title: "Provider Selected",
       description: `Switched to ${deploymentProviders.find(p => p.id === providerId)?.name}`,
@@ -152,17 +204,20 @@ export default function Deploy() {
   };
 
   const handleAddEnvVar = () => {
-    setEnvVars(prev => [...prev, { key: '', value: '' }]);
+    const newEnvVars = [...envVars, { key: '', value: '' }];
+    handleEnvVarsChange(newEnvVars);
   };
 
   const handleUpdateEnvVar = (index: number, field: 'key' | 'value', newValue: string) => {
-    setEnvVars(prev => prev.map((envVar, i) => 
+    const newEnvVars = envVars.map((envVar: EnvVar, i: number) =>
       i === index ? { ...envVar, [field]: newValue } : envVar
-    ));
+    );
+    handleEnvVarsChange(newEnvVars);
   };
 
   const handleRemoveEnvVar = (index: number) => {
-    setEnvVars(prev => prev.filter((_, i) => i !== index));
+    const newEnvVars = envVars.filter((_: EnvVar, i: number) => i !== index);
+    handleEnvVarsChange(newEnvVars);
   };
 
   return (
@@ -292,7 +347,7 @@ export default function Deploy() {
                   <Input
                     type="text"
                     value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
+                    onChange={(e) => handleProjectNameChange(e.target.value)}
                     data-testid="input-project-name"
                   />
                 </div>
@@ -305,7 +360,7 @@ export default function Deploy() {
                     type="text"
                     placeholder="yoursite.com (optional)"
                     value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
+                    onChange={(e) => handleCustomDomainChange(e.target.value)}
                     data-testid="input-custom-domain"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -317,10 +372,10 @@ export default function Deploy() {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Environment
                   </label>
-                  <select 
+                  <select
                     className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm"
                     value={environment}
-                    onChange={(e) => setEnvironment(e.target.value)}
+                    onChange={(e) => handleEnvironmentChange(e.target.value)}
                     data-testid="select-environment"
                   >
                     <option>Production</option>
@@ -348,7 +403,7 @@ export default function Deploy() {
                       </Button>
                     </div>
                     <div className="space-y-2">
-                      {envVars.map((envVar, index) => (
+                      {envVars.map((envVar: EnvVar, index: number) => (
                         <div key={index} className="flex items-center space-x-2 text-xs">
                           <input
                             type="text"
