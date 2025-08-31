@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Navigation } from "@/components/ui/navigation";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -331,9 +332,10 @@ export default function BackendBuilder() {
                       
                       {/* Add Model Form */}
                       {isAddingModel && (
-                        <Card className="border-dashed border-accent">
+                        <Card className="border-2 border-dashed border-accent bg-accent/10 animate-pulse">
                           <CardContent className="p-4">
                             <div className="space-y-3">
+                              <h4 className="font-medium text-accent">Add New Model</h4>
                               <Input
                                 placeholder="Model name (e.g., Product)"
                                 value={newModel.name}
@@ -458,8 +460,9 @@ export default function BackendBuilder() {
                       
                       {/* Add Route Form */}
                       {isAddingRoute && (
-                        <div className="p-3 bg-card border border-dashed border-accent rounded-lg">
+                        <div className="p-4 bg-accent/10 border-2 border-dashed border-accent rounded-lg animate-pulse">
                           <div className="space-y-3">
+                            <h4 className="font-medium text-accent">Add New Route</h4>
                             <div className="flex space-x-2">
                               <select
                                 value={newRoute.method}
