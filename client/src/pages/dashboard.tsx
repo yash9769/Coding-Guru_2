@@ -962,12 +962,8 @@ export default function Dashboard() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      console.log('Build with AI button clicked');
                       setLastAction('build-with-ai');
                       setViewMode('ai-build');
-                      console.log('View mode set to ai-build');
-                      // Add immediate visual feedback
-                      alert('Build with AI button clicked! Check console for details.');
                     }}
                     className="bg-gradient-to-r from-primary to-accent text-white hover:opacity-90"
                     data-testid="button-build-with-ai"
