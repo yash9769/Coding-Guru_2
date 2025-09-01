@@ -1,23 +1,22 @@
 console.log("Loading server/gemini.ts");
 
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 
-const hasValidApiKey = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "dummy_key" && process.env.ANTHROPIC_API_KEY !== "your_anthropic_api_key_here";
+const hasValidApiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "dummy_key" && process.env.GEMINI_API_KEY !== "your_gemini_api_key_here";
 
-console.log("Loaded ANTHROPIC_API_KEY:", process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 5) + "..." : "undefined");
+console.log("Loaded GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) + "..." : "undefined");
 console.log("hasValidApiKey:", hasValidApiKey);
-console.log("Full API key loaded:", !!process.env.ANTHROPIC_API_KEY);
 
-let ai: Anthropic | null = null;
+let ai: GoogleGenAI | null = null;
 try {
   if (hasValidApiKey) {
-    ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-    console.log("Anthropic client initialized successfully");
+    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    console.log("GoogleGenAI client initialized successfully");
   } else {
-    console.warn("ANTHROPIC_API_KEY not configured or is placeholder, using mock responses");
+    console.warn("GEMINI_API_KEY not configured or is placeholder, using mock responses");
   }
 } catch (error) {
-  console.error("Error initializing Anthropic client:", error);
+  console.error("Error initializing GoogleGenAI client:", error);
 }
 
 // Mock response generator
@@ -976,15 +975,12 @@ Return only the component code, no explanations.`;
   console.log(`🤖 DEBUG: Sending prompt to OpenAI API:`, prompt.substring(0, 300) + '...');
 
   try {
-    const response = await ai!.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 2000,
-      temperature: 0.7,
-      messages: [{ role: "user", content: prompt }],
+    const response = await ai!.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
     });
 
-    const textContent = response.content[0];
-    const generatedText = textContent && 'text' in textContent ? textContent.text : '';
+    const generatedText = response.text || '';
 
     console.log(`🤖 DEBUG: Raw AI response received:`, {
       responseTextLength: generatedText.length,
@@ -1131,35 +1127,24 @@ Generate the middleware file.`;
 
   try {
     const [routesResponse, modelsResponse, middlewareResponse] = await Promise.all([
-      ai!.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        messages: [{ role: "user", content: routesPrompt }],
-        temperature: 0.7,
-        max_tokens: 1500,
+      ai!.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: routesPrompt,
       }),
-      ai!.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        messages: [{ role: "user", content: modelsPrompt }],
-        temperature: 0.7,
-        max_tokens: 1500,
+      ai!.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: modelsPrompt,
       }),
-      ai!.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        messages: [{ role: "user", content: middlewarePrompt }],
-        temperature: 0.7,
-        max_tokens: 1500,
+      ai!.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: middlewarePrompt,
       }),
     ]);
 
-    const getTextContent = (response: any) => {
-      const content = response.content[0];
-      return content && 'text' in content ? content.text : "// Error";
-    };
-
     return {
-      routes: getTextContent(routesResponse),
-      models: getTextContent(modelsResponse),
-      middleware: getTextContent(middlewareResponse),
+      routes: routesResponse.text || "// Error generating routes",
+      models: modelsResponse.text || "// Error generating models",
+      middleware: middlewareResponse.text || "// Error generating middleware",
     };
   } catch (error) {
     console.error("Error generating backend code:", error);
@@ -1261,16 +1246,13 @@ Return ONLY valid JSON in this exact format:
       throw new Error('AI client not initialized');
     }
     
-    const response = await ai.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 3000,
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
     });
 
     // Clean the response text to handle potential formatting issues
-    const textContent = response.content[0];
-    let responseText = textContent && 'text' in textContent ? textContent.text : '{}';
+    let responseText = response.text || '{}';
     console.log('🔍 DEBUG: Raw AI response:', {
       length: responseText.length,
       preview: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
@@ -1398,15 +1380,12 @@ Return only the optimized code, no explanations.`;
       throw new Error('AI client not initialized');
     }
     
-    const response = await ai.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2000,
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
     });
 
-    const textContent = response.content[0];
-    return textContent && 'text' in textContent ? textContent.text : code; // Return original if optimization fails
+    return response.text || code; // Return original if optimization fails
   } catch (error) {
     console.error("Error optimizing code:", error);
     return code; // Return original code if optimization fails
