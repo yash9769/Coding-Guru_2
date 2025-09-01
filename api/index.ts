@@ -1,0 +1,100 @@
+// Load environment variables FIRST before any other imports
+import "./env.ts";
+
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes.ts";
+import { setupVite, serveStatic, log } from "./vite.ts";
+
+const app = express();
+
+// For Vercel serverless functions, export the app
+const isVercel = process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
+if (isVercel) {
+  console.log('🔍 DEBUG: Vercel environment detected, exporting app for serverless function');
+  // Export for CommonJS (Vercel expects this)
+  module.exports = app;
+}
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
+});
+
+(async () => {
+  const server = await registerRoutes(app);
+
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    // Don't throw the error after sending response
+  });
+
+  // For Vercel serverless functions, we need to export the app directly
+  // instead of starting a server
+  const isVercel = process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
+  const isDevelopment = !isVercel && (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev");
+
+  console.log('🔍 DEBUG: Deployment environment check:');
+  console.log('🔍 DEBUG: VERCEL:', process.env.VERCEL);
+  console.log('🔍 DEBUG: LAMBDA_TASK_ROOT:', process.env.LAMBDA_TASK_ROOT);
+  console.log('🔍 DEBUG: NODE_ENV:', process.env.NODE_ENV);
+  console.log('🔍 DEBUG: isVercel:', isVercel);
+  console.log('🔍 DEBUG: isDevelopment:', isDevelopment);
+
+  if (isDevelopment) {
+    try {
+      console.log('🔍 DEBUG: Setting up Vite dev server...');
+      await setupVite(app, server);
+      console.log('✅ DEBUG: Vite dev server setup complete');
+    } catch (error) {
+      console.error('❌ DEBUG: Failed to setup Vite:', error);
+      throw error;
+    }
+  } else {
+    console.log('🔍 DEBUG: Setting up static file serving for production...');
+    serveStatic(app);
+  }
+
+  // Export the app for Vercel serverless functions
+  if (isVercel) {
+    console.log('🔍 DEBUG: Running in Vercel environment, exporting app...');
+    // For Vercel, we export the Express app
+    module.exports = app;
+  } else {
+    // For local development, start the server normally
+    console.log('🔍 DEBUG: Running in local environment, starting server...');
+    const port = parseInt(process.env.PORT || '5000', 10);
+    server.listen(port, 'localhost', () => {
+      log(`serving on port ${port}`);
+    });
+  }
+})();
