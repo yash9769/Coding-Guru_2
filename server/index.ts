@@ -6,6 +6,14 @@ import { registerRoutes } from "./routes.ts";
 import { setupVite, serveStatic, log } from "./vite.ts";
 
 const app = express();
+
+// For Vercel serverless functions, export the app
+const isVercel = process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
+if (isVercel) {
+  console.log('🔍 DEBUG: Vercel environment detected, exporting app for serverless function');
+  // Export for CommonJS (Vercel expects this)
+  module.exports = app;
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -50,37 +58,43 @@ app.use((req, res, next) => {
     // Don't throw the error after sending response
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  const appEnv = app.get('env');
-  const nodeEnv = process.env.NODE_ENV;
-  console.log('App environment bytes:', JSON.stringify(appEnv));
-  console.log('NODE_ENV bytes:', JSON.stringify(nodeEnv));
-  
-  const isDevelopment = appEnv?.trim() === "development" || nodeEnv?.trim() === "development";
-  console.log('isDevelopment:', isDevelopment);
-  
+  // For Vercel serverless functions, we need to export the app directly
+  // instead of starting a server
+  const isVercel = process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
+  const isDevelopment = !isVercel && (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev");
+
+  console.log('🔍 DEBUG: Deployment environment check:');
+  console.log('🔍 DEBUG: VERCEL:', process.env.VERCEL);
+  console.log('🔍 DEBUG: LAMBDA_TASK_ROOT:', process.env.LAMBDA_TASK_ROOT);
+  console.log('🔍 DEBUG: NODE_ENV:', process.env.NODE_ENV);
+  console.log('🔍 DEBUG: isVercel:', isVercel);
+  console.log('🔍 DEBUG: isDevelopment:', isDevelopment);
+
   if (isDevelopment) {
     try {
-      console.log('Setting up Vite dev server...');
+      console.log('🔍 DEBUG: Setting up Vite dev server...');
       await setupVite(app, server);
-      console.log('Vite dev server setup complete');
+      console.log('✅ DEBUG: Vite dev server setup complete');
     } catch (error) {
-      console.error('Failed to setup Vite:', error);
+      console.error('❌ DEBUG: Failed to setup Vite:', error);
       throw error;
     }
   } else {
-    console.log('Setting up static file serving...');
+    console.log('🔍 DEBUG: Setting up static file serving for production...');
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen(port, 'localhost', () => {
-    log(`serving on port ${port}`);
-  });
+  // Export the app for Vercel serverless functions
+  if (isVercel) {
+    console.log('🔍 DEBUG: Running in Vercel environment, exporting app...');
+    // For Vercel, we export the Express app
+    module.exports = app;
+  } else {
+    // For local development, start the server normally
+    console.log('🔍 DEBUG: Running in local environment, starting server...');
+    const port = parseInt(process.env.PORT || '5000', 10);
+    server.listen(port, 'localhost', () => {
+      log(`serving on port ${port}`);
+    });
+  }
 })();

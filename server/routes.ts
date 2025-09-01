@@ -68,16 +68,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Build from prompt route - placed before auth middleware to avoid session issues
   app.post("/api/ai/build-from-prompt", async (req: any, res) => {
+    console.log('🔍 DEBUG: /api/ai/build-from-prompt endpoint called');
+    console.log('🔍 DEBUG: Request headers:', JSON.stringify(req.headers, null, 2));
+    console.log('🔍 DEBUG: Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔍 DEBUG: Environment check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      GEMINI_API_KEY_exists: !!process.env.GEMINI_API_KEY,
+      GEMINI_API_KEY_length: process.env.GEMINI_API_KEY?.length || 0
+    });
+
     try {
       const { prompt, mode } = req.body;
-      
+
       if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-        return res.status(400).json({ 
-          message: "A valid prompt is required" 
+        console.log('❌ DEBUG: Invalid prompt received:', { prompt, type: typeof prompt });
+        return res.status(400).json({
+          message: "A valid prompt is required"
         });
       }
 
+      console.log('✅ DEBUG: Valid prompt received, importing gemini module...');
       const { buildFromPrompt } = await import("./gemini");
+      console.log('✅ DEBUG: Gemini module imported, calling buildFromPrompt...');
       const generatedWebsite = await buildFromPrompt(prompt, mode || 'webapp');
       
       // Create a new project with the generated content
@@ -93,15 +105,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const project = await storage.createProject(projectData);
-      
-      res.json({ 
+
+      console.log('✅ DEBUG: Project created successfully, sending response...');
+      console.log('✅ DEBUG: Response data summary:', {
+        projectId: project.id,
+        projectTitle: project.title,
+        generatedTitle: generatedWebsite.title,
+        htmlCodeLength: generatedWebsite.htmlCode.length,
+        cssCodeLength: generatedWebsite.cssCode.length,
+        jsCodeLength: generatedWebsite.jsCode.length
+      });
+
+      res.json({
         project,
-        generated: generatedWebsite 
+        generated: generatedWebsite
       });
     } catch (error) {
-      console.error("Error building from prompt:", error);
-      res.status(500).json({ 
-        message: "Failed to build from prompt. Please check your API key and try again." 
+      console.error("❌ DEBUG: Error building from prompt:", error);
+      console.error("❌ DEBUG: Error details:", error instanceof Error ? error.message : "Unknown error");
+      console.error("❌ DEBUG: Stack trace:", error instanceof Error ? error.stack : "No stack trace");
+      res.status(500).json({
+        message: "Failed to build from prompt. Please check your API key and try again."
       });
     }
   });

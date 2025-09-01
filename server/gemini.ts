@@ -1,22 +1,35 @@
-console.log("Loading server/gemini.ts");
+console.log("🔍 DEBUG: Loading server/gemini.ts");
+console.log("🔍 DEBUG: Environment variables check:");
+console.log("🔍 DEBUG: NODE_ENV:", process.env.NODE_ENV);
+console.log("🔍 DEBUG: GEMINI_API_KEY exists:", !!process.env.GEMINI_API_KEY);
+console.log("🔍 DEBUG: GEMINI_API_KEY length:", process.env.GEMINI_API_KEY?.length || 0);
+console.log("🔍 DEBUG: GEMINI_API_KEY preview:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 10) + "..." : "undefined");
 
 import { GoogleGenAI } from "@google/genai";
 
 const hasValidApiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "dummy_key" && process.env.GEMINI_API_KEY !== "your_gemini_api_key_here";
 
-console.log("Loaded GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) + "..." : "undefined");
-console.log("hasValidApiKey:", hasValidApiKey);
+console.log("🔍 DEBUG: hasValidApiKey evaluation:");
+console.log("🔍 DEBUG: - GEMINI_API_KEY exists:", !!process.env.GEMINI_API_KEY);
+console.log("🔍 DEBUG: - Not dummy_key:", process.env.GEMINI_API_KEY !== "dummy_key");
+console.log("🔍 DEBUG: - Not placeholder:", process.env.GEMINI_API_KEY !== "your_gemini_api_key_here");
+console.log("🔍 DEBUG: - Final hasValidApiKey:", hasValidApiKey);
 
 let ai: GoogleGenAI | null = null;
 try {
   if (hasValidApiKey) {
+    console.log("🔍 DEBUG: Attempting to initialize GoogleGenAI client...");
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    console.log("GoogleGenAI client initialized successfully");
+    console.log("✅ DEBUG: GoogleGenAI client initialized successfully");
+    console.log("✅ DEBUG: Client object created:", !!ai);
   } else {
-    console.warn("GEMINI_API_KEY not configured or is placeholder, using mock responses");
+    console.warn("⚠️ DEBUG: GEMINI_API_KEY not configured or is placeholder, using mock responses");
+    console.warn("⚠️ DEBUG: This means the backend will return mock/template functions instead of real AI-generated code");
   }
 } catch (error) {
-  console.error("Error initializing GoogleGenAI client:", error);
+  console.error("❌ DEBUG: Error initializing GoogleGenAI client:", error);
+  console.error("❌ DEBUG: Error details:", error instanceof Error ? error.message : "Unknown error");
+  console.error("❌ DEBUG: Stack trace:", error instanceof Error ? error.stack : "No stack trace");
 }
 
 // Mock response generator
@@ -945,12 +958,20 @@ export async function generateReactComponent(
     framework,
     stylePreferences,
     hasValidApiKey,
-    aiClientExists: !!ai
+    aiClientExists: !!ai,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
   });
 
   // Return mock response if no valid API key
   if (!hasValidApiKey) {
     console.log(`📝 DEBUG: Using mock response for ${componentType} component (no valid API key)`);
+    console.log(`📝 DEBUG: Current GEMINI_API_KEY status:`, {
+      exists: !!process.env.GEMINI_API_KEY,
+      isDummy: process.env.GEMINI_API_KEY === "dummy_key",
+      isPlaceholder: process.env.GEMINI_API_KEY === "your_gemini_api_key_here",
+      length: process.env.GEMINI_API_KEY?.length || 0
+    });
     const mockCode = generateMockCode(componentType, framework);
     console.log(`📝 DEBUG: Mock code length: ${mockCode.length} characters`);
     console.log(`📝 DEBUG: Mock code preview (first 200 chars):`, mockCode.substring(0, 200));
@@ -1170,12 +1191,21 @@ export async function buildFromPrompt(userPrompt: string, mode: 'flow' | 'webapp
     userPrompt: userPrompt.substring(0, 100) + '...',
     mode,
     hasValidApiKey,
-    aiClientExists: !!ai
+    aiClientExists: !!ai,
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
   });
 
   // Return mock response if no valid API key
   if (!hasValidApiKey) {
     console.log(`📝 DEBUG: Using mock response (no valid API key)`);
+    console.log(`📝 DEBUG: Current GEMINI_API_KEY status:`, {
+      exists: !!process.env.GEMINI_API_KEY,
+      isDummy: process.env.GEMINI_API_KEY === "dummy_key",
+      isPlaceholder: process.env.GEMINI_API_KEY === "your_gemini_api_key_here",
+      length: process.env.GEMINI_API_KEY?.length || 0,
+      preview: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 15) + "..." : "undefined"
+    });
     return generateMockWebsite(userPrompt, mode);
   }
 
