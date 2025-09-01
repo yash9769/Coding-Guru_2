@@ -1277,6 +1277,17 @@ export default function Dashboard() {
                     const code = result.generated?.htmlCode || result.htmlCode || 'No code generated';
                     const title = result.project?.title || result.generated?.title || 'AI Generated Project';
 
+                    console.log('🔍 DEBUG: Dashboard storing in sessionStorage:', {
+                      codeLength: code.length,
+                      codePreview: code.substring(0, 200) + (code.length > 200 ? '...' : ''),
+                      title,
+                      hasESM: code.includes('__defProp') || code.includes('__getOwnPropNames'),
+                      hasHTML: code.includes('<html') || code.includes('<body'),
+                      hasMarkdown: code.includes('```'),
+                      resultKeys: Object.keys(result),
+                      generatedKeys: result.generated ? Object.keys(result.generated) : 'No generated object'
+                    });
+
                     sessionStorage.setItem('ai-output-code', code);
                     sessionStorage.setItem('ai-output-title', title);
 

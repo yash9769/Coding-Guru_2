@@ -1,26 +1,29 @@
 console.log("Loading server/gemini.ts");
 
-import { GoogleGenAI } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 
-const hasValidApiKey = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "dummy_key" && process.env.GEMINI_API_KEY !== "your_gemini_api_key_here";
+const hasValidApiKey = process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== "dummy_key" && process.env.ANTHROPIC_API_KEY !== "your_anthropic_api_key_here";
 
-console.log("Loaded GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) + "..." : "undefined");
+console.log("Loaded ANTHROPIC_API_KEY:", process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 5) + "..." : "undefined");
 console.log("hasValidApiKey:", hasValidApiKey);
+console.log("Full API key loaded:", !!process.env.ANTHROPIC_API_KEY);
 
-let ai: GoogleGenAI | null = null;
+let ai: Anthropic | null = null;
 try {
   if (hasValidApiKey) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-    console.log("GoogleGenAI client initialized successfully");
+    ai = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+    console.log("Anthropic client initialized successfully");
   } else {
-    console.warn("GEMINI_API_KEY not configured or is placeholder, using mock responses");
+    console.warn("ANTHROPIC_API_KEY not configured or is placeholder, using mock responses");
   }
 } catch (error) {
-  console.error("Error initializing GoogleGenAI client:", error);
+  console.error("Error initializing Anthropic client:", error);
 }
 
 // Mock response generator
 function generateMockCode(type: string, framework: string): string {
+  console.log(`📝 DEBUG: generateMockCode called with:`, { type, framework });
+
   const templates = {
     "Hero Section": `import React from 'react';
 
@@ -111,10 +114,28 @@ const Card: React.FC<CardProps> = ({ title, description, imageUrl }) => {
 export default Card;`
   };
 
-  return templates[type as keyof typeof templates] || templates["Hero Section"];
+  const selectedTemplate = templates[type as keyof typeof templates] || templates["Hero Section"];
+
+  console.log(`📝 DEBUG: generateMockCode returning template:`, {
+    requestedType: type,
+    selectedType: type in templates ? type : "Hero Section (fallback)",
+    codeLength: selectedTemplate.length,
+    codePreview: selectedTemplate.substring(0, 150) + '...',
+    hasIncompleteImport: selectedTemplate.includes('import') && selectedTemplate.includes('from ;'),
+    hasSemicolons: selectedTemplate.includes(';;;;;;;;;')
+  });
+
+  return selectedTemplate;
 }
 
 function generateMockWebsite(prompt: string, mode: 'flow' | 'webapp' = 'webapp') {
+  console.log(`📝 DEBUG: generateMockWebsite called with:`, {
+    prompt: prompt.substring(0, 100) + '...',
+    mode,
+    isGeneratingMock: true,
+    stackTrace: new Error().stack?.split('\n').slice(0, 5).join('\n')
+  });
+
   if (mode === 'flow') {
     const title = "User Workflow";
     
@@ -212,6 +233,344 @@ if (document.readyState === 'loading') {
                   prompt.includes("dashboard") ? "Admin Dashboard" :
                   "Modern Web App";
     
+    const mockResult = {
+      title,
+      description: `AI-generated ${title.toLowerCase()} with interactive features`,
+      components: [
+        { type: "header", content: "Navigation Header" },
+        { type: "hero", content: "Hero Section" },
+        { type: "content", content: "Main Content" },
+        { type: "footer", content: "Footer" }
+      ],
+      htmlCode: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gray-50 font-sans">
+  <!-- Navigation Header -->
+  <header class="bg-white shadow-sm sticky top-0 z-50">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <h1 class="text-2xl font-bold text-gray-900">${title}</h1>
+        </div>
+        <div class="hidden md:flex items-center space-x-8">
+          <a href="#home" class="text-gray-700 hover:text-blue-600 transition-colors font-medium">Home</a>
+          <a href="#about" class="text-gray-700 hover:text-blue-600 transition-colors font-medium">About</a>
+          <a href="#services" class="text-gray-700 hover:text-blue-600 transition-colors font-medium">Services</a>
+          <a href="#contact" class="text-gray-700 hover:text-blue-600 transition-colors font-medium">Contact</a>
+          <button class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+            Get Started
+          </button>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="home" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">Welcome to ${title}</h1>
+      <p class="text-xl mb-8 max-w-2xl mx-auto opacity-90">
+        This is your AI-generated web application based on: "${prompt}"
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all transform hover:scale-105">
+          Get Started
+        </button>
+        <button class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all">
+          Learn More
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="services" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Amazing Features</h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Discover what makes our AI-generated application special</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-gray-50 p-8 rounded-xl hover:shadow-lg transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-gray-900">Lightning Fast</h3>
+          <p class="text-gray-600">Built with modern web technologies for optimal performance and user experience.</p>
+        </div>
+        <div class="bg-gray-50 p-8 rounded-xl hover:shadow-lg transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-gray-900">User Friendly</h3>
+          <p class="text-gray-600">Intuitive design and seamless user experience crafted with attention to detail.</p>
+        </div>
+        <div class="bg-gray-50 p-8 rounded-xl hover:shadow-lg transition-all transform hover:-translate-y-1">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-gray-900">AI-Powered</h3>
+          <p class="text-gray-600">Generated by artificial intelligence to match your specific requirements perfectly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="py-20 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Get In Touch</h2>
+        <p class="text-lg text-gray-600">Ready to get started? We'd love to hear from you!</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-xl p-8">
+        <form id="contact-form" class="space-y-6">
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <input type="text" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Your name">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input type="email" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="your@email.com">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+            <textarea required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all h-32 resize-none" placeholder="Tell us about your project..."></textarea>
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-all transform hover:scale-105">
+            Send Message
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="md:col-span-2">
+          <h3 class="text-2xl font-bold mb-4">${title}</h3>
+          <p class="text-gray-400 mb-4">Built with AI to deliver exceptional web experiences.</p>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Home</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">About</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Services</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-4">Contact</h4>
+          <ul class="space-y-2 text-gray-400">
+            <li>info@${title.toLowerCase().replace(/\s+/g, '')}.com</li>
+            <li>+1 (555) 123-4567</li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+        <p>&copy; 2024 ${title}. Built with AI. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`,
+      cssCode: `/* Custom styles for ${title} */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom button hover effects */
+.btn-hover {
+  transition: all 0.3s ease;
+}
+
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Card animations */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Form focus styles */
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}`,
+      jsCode: `// JavaScript for ${title}
+
+// Smooth scrolling for navigation links
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('${title} initialized successfully!');
+
+  // Mobile menu toggle
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  if (mobileMenuBtn && mobileMenu) {
+    mobileMenuBtn.addEventListener('click', function() {
+      mobileMenu.classList.toggle('active');
+    });
+  }
+
+  // Smooth scrolling for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+
+  // Contact form handling
+  const contactForm = document.getElementById('contact-form');
+  if (contactForm) {
+    contactForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      // Get form data
+      const formData = new FormData(this);
+      const name = this.querySelector('input[type="text"]').value;
+      const email = this.querySelector('input[type="email"]').value;
+      const message = this.querySelector('textarea').value;
+
+      // Simple validation
+      if (!name || !email || !message) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
+      // Simulate form submission
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Sending...';
+      submitBtn.disabled = true;
+
+      setTimeout(() => {
+        alert('Thank you for your message! We\'ll get back to you soon.');
+        this.reset();
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }, 2000);
+    });
+  }
+
+  // Add scroll animations
+  const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  };
+
+  const observer = new IntersectionObserver(function(entries) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  // Observe all cards and sections
+  document.querySelectorAll('.card-hover, section').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'all 0.6s ease';
+    observer.observe(el);
+  });
+
+  // Add button click effects
+  document.querySelectorAll('button').forEach(button => {
+    button.addEventListener('click', function() {
+      this.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        this.style.transform = '';
+      }, 150);
+    });
+  });
+});
+
+// Utility functions
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+}`
+    };
+
+    console.log(`📝 DEBUG: generateMockWebsite returning:`, {
+      title: mockResult.title,
+      description: mockResult.description,
+      htmlCodeLength: mockResult.htmlCode.length,
+      cssCodeLength: mockResult.cssCode.length,
+      jsCodeLength: mockResult.jsCode.length,
+      htmlCodePreview: mockResult.htmlCode.substring(0, 100) + '...',
+      cssCodePreview: mockResult.cssCode.substring(0, 50) + '...',
+      jsCodePreview: mockResult.jsCode.substring(0, 50) + '...',
+      htmlStartsWithDoctype: mockResult.htmlCode.trim().startsWith('<!DOCTYPE'),
+      htmlContainsESM: mockResult.htmlCode.includes('__defProp') || mockResult.htmlCode.includes('__getOwnPropNames')
+    });
+
+    return mockResult;
+
     return {
       title,
       description: `AI-generated ${title.toLowerCase()} with interactive features`,
@@ -582,13 +941,24 @@ export async function generateReactComponent(
   framework: string,
   stylePreferences: string
 ): Promise<string> {
+  console.log(`🔍 DEBUG: generateReactComponent called with:`, {
+    componentType,
+    framework,
+    stylePreferences,
+    hasValidApiKey,
+    aiClientExists: !!ai
+  });
+
   // Return mock response if no valid API key
   if (!hasValidApiKey) {
-    console.log(`Generating mock ${componentType} component`);
-    return generateMockCode(componentType, framework);
+    console.log(`📝 DEBUG: Using mock response for ${componentType} component (no valid API key)`);
+    const mockCode = generateMockCode(componentType, framework);
+    console.log(`📝 DEBUG: Mock code length: ${mockCode.length} characters`);
+    console.log(`📝 DEBUG: Mock code preview (first 200 chars):`, mockCode.substring(0, 200));
+    return mockCode;
   }
 
-  const prompt = `Generate a modern ${componentType} component using ${framework}. 
+  const prompt = `Generate a modern ${componentType} component using ${framework}.
 
 Style preferences: ${stylePreferences}
 
@@ -603,17 +973,87 @@ Requirements:
 
 Return only the component code, no explanations.`;
 
+  console.log(`🤖 DEBUG: Sending prompt to OpenAI API:`, prompt.substring(0, 300) + '...');
+
   try {
-    const response = await ai!.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: prompt,
+    const response = await ai!.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 2000,
+      temperature: 0.7,
+      messages: [{ role: "user", content: prompt }],
     });
 
-    return response.text || generateMockCode(componentType, framework);
+    const textContent = response.content[0];
+    const generatedText = textContent && 'text' in textContent ? textContent.text : '';
+
+    console.log(`🤖 DEBUG: Raw AI response received:`, {
+      responseTextLength: generatedText.length,
+      responseTextPreview: generatedText.substring(0, 300) || 'EMPTY',
+      hasText: !!generatedText
+    });
+
+    if (!generatedText) {
+      console.warn(`⚠️ DEBUG: AI returned empty response, falling back to mock`);
+      const mockCode = generateMockCode(componentType, framework);
+      console.log(`📝 DEBUG: Fallback mock code length: ${mockCode.length} characters`);
+      return mockCode;
+    }
+
+    // Strip markdown code blocks from AI response
+    let generatedCode = generatedText.trim();
+
+    console.log(`🔧 DEBUG: Before markdown stripping:`, {
+      length: generatedCode.length,
+      startsWith: generatedCode.substring(0, 10),
+      endsWith: generatedCode.substring(generatedCode.length - 10)
+    });
+
+    // Remove markdown code block markers - more robust pattern
+    generatedCode = generatedCode.replace(/^```[a-zA-Z]*\s*\n?/m, ''); // Remove opening ```language
+    generatedCode = generatedCode.replace(/\n?```\s*$/m, ''); // Remove closing ```
+
+    // Also handle cases where there might be extra backticks
+    generatedCode = generatedCode.replace(/^```\s*\n?/gm, '');
+    generatedCode = generatedCode.replace(/\n?```\s*$/gm, '');
+
+    // Clean up any remaining whitespace
+    generatedCode = generatedCode.trim();
+
+    console.log(`🔧 DEBUG: After markdown stripping:`, {
+      length: generatedCode.length,
+      startsWith: generatedCode.substring(0, 20),
+      endsWith: generatedCode.substring(Math.max(0, generatedCode.length - 20)),
+      hasMarkdown: generatedCode.includes('```'),
+      // Show if any markdown markers remain
+      remainingMarkdownCount: (generatedCode.match(/```/g) || []).length,
+      firstMarkdownOccurrence: generatedCode.includes('```') ? generatedCode.substring(generatedCode.indexOf('```'), Math.min(generatedCode.indexOf('```') + 30, generatedCode.length)) : 'None'
+    });
+
+    console.log(`� DEBUG: After markdown stripping:`, {
+      totalLength: generatedCode.length,
+      startsWithImport: generatedCode.startsWith('import'),
+      containsReact: generatedCode.includes('React'),
+      endsWithExport: generatedCode.includes('export default'),
+      lineCount: generatedCode.split('\n').length,
+      firstLine: generatedCode.split('\n')[0],
+      lastLine: generatedCode.split('\n').slice(-1)[0]
+    });
+
+    // Final validation
+    if (!generatedCode || generatedCode.length === 0) {
+      console.warn(`⚠️ DEBUG: Code became empty after processing, falling back to mock`);
+      const mockCode = generateMockCode(componentType, framework);
+      console.log(`📝 DEBUG: Fallback mock code length: ${mockCode.length} characters`);
+      return mockCode;
+    }
+
+    return generatedCode;
   } catch (error) {
-    console.error("Error generating component:", error);
-    console.log("Falling back to mock response");
-    return generateMockCode(componentType, framework);
+    console.error("❌ DEBUG: Error generating component:", error);
+    console.log("📝 DEBUG: Falling back to mock response due to error");
+    const mockCode = generateMockCode(componentType, framework);
+    console.log(`📝 DEBUG: Error fallback mock code length: ${mockCode.length} characters`);
+    return mockCode;
   }
 }
 
@@ -691,24 +1131,35 @@ Generate the middleware file.`;
 
   try {
     const [routesResponse, modelsResponse, middlewareResponse] = await Promise.all([
-      ai!.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: routesPrompt,
+      ai!.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        messages: [{ role: "user", content: routesPrompt }],
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
-      ai!.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: modelsPrompt,
+      ai!.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        messages: [{ role: "user", content: modelsPrompt }],
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
-      ai!.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: middlewarePrompt,
+      ai!.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        messages: [{ role: "user", content: middlewarePrompt }],
+        temperature: 0.7,
+        max_tokens: 1500,
       }),
     ]);
 
+    const getTextContent = (response: any) => {
+      const content = response.content[0];
+      return content && 'text' in content ? content.text : "// Error";
+    };
+
     return {
-      routes: routesResponse.text || "// Error generating routes",
-      models: modelsResponse.text || "// Error generating models",
-      middleware: middlewareResponse.text || "// Error generating middleware",
+      routes: getTextContent(routesResponse),
+      models: getTextContent(modelsResponse),
+      middleware: getTextContent(middlewareResponse),
     };
   } catch (error) {
     console.error("Error generating backend code:", error);
@@ -730,9 +1181,16 @@ export async function buildFromPrompt(userPrompt: string, mode: 'flow' | 'webapp
   cssCode: string;
   jsCode: string;
 }> {
+  console.log(`🔍 DEBUG: buildFromPrompt called with:`, {
+    userPrompt: userPrompt.substring(0, 100) + '...',
+    mode,
+    hasValidApiKey,
+    aiClientExists: !!ai
+  });
+
   // Return mock response if no valid API key
   if (!hasValidApiKey) {
-    console.log(`Generating mock ${mode} from prompt: ${userPrompt}`);
+    console.log(`📝 DEBUG: Using mock response (no valid API key)`);
     return generateMockWebsite(userPrompt, mode);
   }
 
@@ -803,24 +1261,34 @@ Return ONLY valid JSON in this exact format:
       throw new Error('AI client not initialized');
     }
     
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-pro",
-      config: {
-        responseMimeType: "application/json",
-      },
-      contents: prompt,
+    const response = await ai.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 3000,
     });
 
     // Clean the response text to handle potential formatting issues
-    let responseText = response.text || '{}';
-    console.log('Raw AI response:', responseText);
+    const textContent = response.content[0];
+    let responseText = textContent && 'text' in textContent ? textContent.text : '{}';
+    console.log('🔍 DEBUG: Raw AI response:', {
+      length: responseText.length,
+      preview: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
+      containsJsonMarkers: responseText.includes('```json'),
+      containsCodeBlocks: responseText.includes('```')
+    });
 
     // Remove any markdown code blocks if present
     responseText = responseText.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
     // Trim whitespace
     responseText = responseText.trim();
 
-    console.log('Cleaned response text:', responseText);
+    console.log('🔍 DEBUG: Cleaned response text:', {
+      length: responseText.length,
+      preview: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
+      startsWithBrace: responseText.startsWith('{'),
+      endsWithBrace: responseText.endsWith('}')
+    });
 
     let result;
     try {
@@ -844,14 +1312,66 @@ Return ONLY valid JSON in this exact format:
       }
     }
     
-    return {
+    // Strip markdown code blocks from the generated code
+    const stripMarkdownCodeBlocks = (code: string): string => {
+      if (!code || typeof code !== 'string') return code;
+
+      console.log(`🔧 DEBUG: Stripping markdown from code block:`, {
+        originalLength: code.length,
+        hasMarkdown: code.includes('```'),
+        markdownCount: (code.match(/```/g) || []).length
+      });
+
+      // Remove markdown code block markers - comprehensive pattern
+      let cleanedCode = code;
+
+      // Remove opening code blocks with language specifiers
+      cleanedCode = cleanedCode.replace(/^```[a-zA-Z]*\s*\n?/gm, '');
+
+      // Remove opening code blocks without language
+      cleanedCode = cleanedCode.replace(/^```\s*\n?/gm, '');
+
+      // Remove closing code blocks
+      cleanedCode = cleanedCode.replace(/\n?```\s*$/gm, '');
+
+      // Clean up any remaining whitespace
+      cleanedCode = cleanedCode.trim();
+
+      console.log(`🔧 DEBUG: After stripping:`, {
+        cleanedLength: cleanedCode.length,
+        stillHasMarkdown: cleanedCode.includes('```'),
+        remainingMarkdownCount: (cleanedCode.match(/```/g) || []).length
+      });
+
+      return cleanedCode;
+    };
+
+    const finalResult = {
       title: result.title || "Generated Project",
       description: result.description || "Generated using AI",
       components: result.components || [],
-      htmlCode: result.htmlCode || "<!DOCTYPE html><html><head><title>Generated Site</title></head><body><h1>Generated Content</h1></body></html>",
-      cssCode: result.cssCode || "/* Generated styles */",
-      jsCode: result.jsCode || "// Generated JavaScript",
+      htmlCode: stripMarkdownCodeBlocks(result.htmlCode || "<!DOCTYPE html><html><head><title>Generated Site</title></head><body><h1>Generated Content</h1></body></html>"),
+      cssCode: stripMarkdownCodeBlocks(result.cssCode || "/* Generated styles */"),
+      jsCode: stripMarkdownCodeBlocks(result.jsCode || "// Generated JavaScript"),
     };
+
+    console.log('📤 DEBUG: buildFromPrompt final result (after markdown stripping):', {
+      title: finalResult.title,
+      descriptionLength: finalResult.description.length,
+      componentsCount: finalResult.components.length,
+      htmlCodeLength: finalResult.htmlCode.length,
+      cssCodeLength: finalResult.cssCode.length,
+      jsCodeLength: finalResult.jsCode.length,
+      htmlCodePreview: finalResult.htmlCode.substring(0, 200) + '...',
+      hasMalformedImports: finalResult.htmlCode.includes('from ;') || finalResult.htmlCode.includes(';;;;;;;;;'),
+      // Verify markdown stripping worked
+      htmlHasMarkdown: finalResult.htmlCode.includes('```'),
+      cssHasMarkdown: finalResult.cssCode.includes('```'),
+      jsHasMarkdown: finalResult.jsCode.includes('```'),
+      strippingSuccessful: !finalResult.htmlCode.includes('```') && !finalResult.cssCode.includes('```') && !finalResult.jsCode.includes('```')
+    });
+
+    return finalResult;
   } catch (error) {
     console.error("Error building from prompt:", error);
     console.log("Falling back to mock response");
@@ -878,12 +1398,15 @@ Return only the optimized code, no explanations.`;
       throw new Error('AI client not initialized');
     }
     
-    const response = await ai.models.generateContent({
-      model: "gemini-1.5-pro",
-      contents: prompt,
+    const response = await ai.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000,
     });
 
-    return response.text || code; // Return original if optimization fails
+    const textContent = response.content[0];
+    return textContent && 'text' in textContent ? textContent.text : code; // Return original if optimization fails
   } catch (error) {
     console.error("Error optimizing code:", error);
     return code; // Return original code if optimization fails

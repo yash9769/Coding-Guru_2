@@ -27,8 +27,23 @@ export default function AIOutput() {
     const code = urlParams.get('code');
     const title = urlParams.get('title');
 
+    console.log('🔍 DEBUG: ai-output.tsx - Loading data:', {
+      hasUrlCode: !!code,
+      hasUrlTitle: !!title,
+      urlCodeLength: code?.length || 0,
+      urlCodePreview: code ? code.substring(0, 100) + '...' : 'None',
+      hasMarkdownInUrlCode: code?.includes('```') || false
+    });
+
     if (code) {
-      setGeneratedCode(decodeURIComponent(code));
+      const decodedCode = decodeURIComponent(code);
+      console.log('🔍 DEBUG: ai-output.tsx - Decoded code:', {
+        decodedLength: decodedCode.length,
+        hasMarkdown: decodedCode.includes('```'),
+        markdownCount: (decodedCode.match(/```/g) || []).length,
+        firstMarkdown: decodedCode.includes('```') ? decodedCode.substring(decodedCode.indexOf('```'), Math.min(decodedCode.indexOf('```') + 50, decodedCode.length)) : 'None'
+      });
+      setGeneratedCode(decodedCode);
     }
 
     if (title) {
@@ -38,6 +53,12 @@ export default function AIOutput() {
     // Also check sessionStorage as backup
     const storedCode = sessionStorage.getItem('ai-output-code');
     const storedTitle = sessionStorage.getItem('ai-output-title');
+
+    console.log('🔍 DEBUG: ai-output.tsx - Session storage:', {
+      hasStoredCode: !!storedCode,
+      storedCodeLength: storedCode?.length || 0,
+      hasMarkdownInStoredCode: storedCode?.includes('```') || false
+    });
 
     if (storedCode && !code) {
       setGeneratedCode(storedCode);
@@ -79,17 +100,32 @@ export default function AIOutput() {
 
   // Create HTML preview from generated code
   const createPreviewHTML = (code: string) => {
+    console.log('🔍 DEBUG: createPreviewHTML called with code:', {
+      codeLength: code.length,
+      codePreview: code.substring(0, 200) + (code.length > 200 ? '...' : ''),
+      containsESM: code.includes('__defProp') || code.includes('__getOwnPropNames'),
+      containsHTML: code.includes('<html') || code.includes('<body') || code.includes('<div'),
+      containsScript: code.includes('<script') || code.includes('import'),
+      startsWithHTML: code.trim().startsWith('<')
+    });
+
     // Extract HTML content from the generated code
     const htmlMatch = code.match(/<html[^>]*>[\s\S]*<\/html>/i) ||
-                     code.match(/<body[^>]*>[\s\S]*<\/body>/i) ||
-                     code.match(/<div[^>]*>[\s\S]*<\/div>/i);
+                      code.match(/<body[^>]*>[\s\S]*<\/body>/i) ||
+                      code.match(/<div[^>]*>[\s\S]*<\/div>/i);
 
     if (htmlMatch) {
+      console.log('🔍 DEBUG: Found HTML match:', {
+        matchLength: htmlMatch[0].length,
+        matchPreview: htmlMatch[0].substring(0, 100) + '...'
+      });
       return htmlMatch[0];
     }
 
+    console.log('🔍 DEBUG: No HTML match found, wrapping in basic HTML structure');
+
     // If no HTML found, wrap the code in a basic HTML structure
-    return `
+    const wrappedHTML = `
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -100,11 +136,14 @@ export default function AIOutput() {
       </head>
       <body>
         <div class="p-4">
-          ${code}
+          <pre class="whitespace-pre-wrap font-mono text-sm">${code.replace(/</g, '<').replace(/>/g, '>')}</pre>
         </div>
       </body>
       </html>
     `;
+
+    console.log('🔍 DEBUG: Wrapped HTML length:', wrappedHTML.length);
+    return wrappedHTML;
   };
 
   if (!generatedCode) {
