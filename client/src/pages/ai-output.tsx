@@ -23,25 +23,36 @@ export default function AIOutput() {
 
   // Load data from sessionStorage or URL params
   useEffect(() => {
+    console.log('🔍 DEBUG: ai-output.tsx - Page loaded, checking for data...');
+    console.log('🔍 DEBUG: Current URL:', window.location.href);
+    console.log('🔍 DEBUG: URL search params:', window.location.search);
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const title = urlParams.get('title');
 
-    console.log('🔍 DEBUG: ai-output.tsx - Loading data:', {
+    console.log('🔍 DEBUG: ai-output.tsx - URL parameters:', {
       hasUrlCode: !!code,
       hasUrlTitle: !!title,
       urlCodeLength: code?.length || 0,
       urlCodePreview: code ? code.substring(0, 100) + '...' : 'None',
-      hasMarkdownInUrlCode: code?.includes('```') || false
+      hasMarkdownInUrlCode: code?.includes('```') || false,
+      hasESMInUrlCode: code?.includes('__defProp') || false,
+      hasHTMLInUrlCode: code?.includes('<html') || false
     });
 
     if (code) {
       const decodedCode = decodeURIComponent(code);
-      console.log('🔍 DEBUG: ai-output.tsx - Decoded code:', {
+      console.log('🔍 DEBUG: ai-output.tsx - Decoded code analysis:', {
         decodedLength: decodedCode.length,
         hasMarkdown: decodedCode.includes('```'),
-        markdownCount: (decodedCode.match(/```/g) || []).length,
-        firstMarkdown: decodedCode.includes('```') ? decodedCode.substring(decodedCode.indexOf('```'), Math.min(decodedCode.indexOf('```') + 50, decodedCode.length)) : 'None'
+        hasESM: decodedCode.includes('__defProp'),
+        hasHTML: decodedCode.includes('<html'),
+        hasScript: decodedCode.includes('<script'),
+        startsWithHTML: decodedCode.trim().startsWith('<'),
+        startsWithESM: decodedCode.trim().startsWith('var __defProp'),
+        firstLine: decodedCode.split('\n')[0],
+        first50Chars: decodedCode.substring(0, 50)
       });
       setGeneratedCode(decodedCode);
     }
@@ -57,16 +68,20 @@ export default function AIOutput() {
     console.log('🔍 DEBUG: ai-output.tsx - Session storage:', {
       hasStoredCode: !!storedCode,
       storedCodeLength: storedCode?.length || 0,
-      hasMarkdownInStoredCode: storedCode?.includes('```') || false
+      hasMarkdownInStoredCode: storedCode?.includes('```') || false,
+      hasESMInStoredCode: storedCode?.includes('__defProp') || false
     });
 
     if (storedCode && !code) {
+      console.log('🔍 DEBUG: Using sessionStorage code');
       setGeneratedCode(storedCode);
     }
 
     if (storedTitle && !title) {
       setProjectTitle(storedTitle);
     }
+
+    console.log('🔍 DEBUG: ai-output.tsx - Data loading complete');
   }, []);
 
   const handleCopyCode = () => {
