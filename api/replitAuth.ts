@@ -8,9 +8,9 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS && process.env.NODE_ENV === "production") {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+// if (!process.env.REPLIT_DOMAINS && process.env.NODE_ENV === "production") {
+//   throw new Error("Environment variable REPLIT_DOMAINS not provided");
+// }
 
 let getOidcConfig: () => Promise<any>;
 

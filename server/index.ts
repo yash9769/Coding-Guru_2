@@ -4,6 +4,7 @@ import "./env.ts";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.ts";
 import { setupVite, serveStatic, log } from "./vite.ts";
+import { setupAuth } from "./replitAuth.ts";
 
 const app = express();
 
@@ -48,6 +49,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup authentication first
+  await setupAuth(app);
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
