@@ -1,5 +1,5 @@
 [build]
-  publish = "dist"
+  publish = "dist/public"
   command = "npm run build"
 
 [build.environment]
@@ -12,8 +12,9 @@
 
 [functions]
   directory = "api"
+  external_node_modules = ["@babel/preset-typescript", "lightningcss"]
 
 [dev]
   command = "npm run dev"
   port = 3000
-  publish = "dist"
+  publish = "dist/public"
